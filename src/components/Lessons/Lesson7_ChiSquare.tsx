@@ -67,7 +67,7 @@ function GhostExpectedBox({
 
 export function Lesson7_ChiSquare({
   values,
-  stats,
+  stats: _stats,
   setValue,
   setValues,
   totalLessons,

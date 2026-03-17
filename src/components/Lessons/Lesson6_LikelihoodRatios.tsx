@@ -19,7 +19,7 @@ interface Lesson6Props extends LessonNavProps {
 export function Lesson6_LikelihoodRatios({
   values,
   stats,
-  setValue,
+  setValue: _setValue,
   setValues,
   totalLessons,
   onPrev,

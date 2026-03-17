@@ -9,7 +9,6 @@ import {
   thresholdFromSensitivity,
   computeAUC,
 } from "../../utils/trajectory";
-import { computeLayout, toSvg } from "../../utils/geometry";
 import { presets, generalPresets, clinicalPresets } from "../../utils/presets";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
 import type { LessonNavProps } from "./lessonTypes";
@@ -142,12 +141,6 @@ export function Lesson5_Trajectory({
 
   // AUC
   const auc = useMemo(() => computeAUC(trajectory), [trajectory]);
-
-  // Build custom SVG content: trajectory curve + chance line overlaid on the diagram
-  const layout = useMemo(
-    () => computeLayout(sliderValues, 560, 500, 60),
-    [sliderValues]
-  );
 
   return (
     <LessonLayout
