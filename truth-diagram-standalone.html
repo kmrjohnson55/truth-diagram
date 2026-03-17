@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Truth Diagram — Interactive Diagnostic Testing Visualization</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useCallback, useMemo, useRef, useEffect } = React;
+
+/* ══════════════════════════════════════════════════════════════
+   UTILS — statistics.js
+   ══════════════════════════════════════════════════════════════ */
+
+function computeStats(v) {
+  const { tp, fp, fn, tn } = v;
+  const total = tp + fp + fn + tn;
+  const diseased = tp + fn;
+  const healthy = fp + tn;
+  const testPos = tp + fp;
+  const testNeg = fn + tn;
+  const sensitivity = diseased > 0 ? tp / diseased : 0;
+  const specificity = healthy > 0 ? tn / healthy : 0;
+  const ppv = testPos > 0 ? tp / testPos : 0;
+  const npv = testNeg > 0 ? tn / testNeg : 0;
+  const accuracy = total > 0 ? (tp + tn) / total : 0;
+  const prevalence = total > 0 ? diseased / total : 0;
+  const positiveLR = specificity < 1 ? sensitivity / (1 - specificity) : Infinity;
+  const negativeLR = specificity > 0 ? (1 - sensitivity) / specificity : Infinity;
+  const oddsRatio = fp * fn > 0 ? (tp * tn) / (fp * fn) : Infinity;
+  const pretestOdds = prevalence < 1 ? prevalence / (1 - prevalence) : Infinity;
+  const posttestOddsPositive = fp > 0 ? tp / fp : Infinity;
+  const posttestOddsNegative = tn > 0 ? fn / tn : 0;
+  return { sensitivity, specificity, ppv, npv, accuracy, prevalence, positiveLR, negativeLR, oddsRatio, pretestOdds, posttestOddsPositive, posttestOddsNegative, total };
+}
+
+function formatStat(value, decimals = 1) {
+  if (!isFinite(value)) return "\u221E";
+  return (value * 100).toFixed(decimals) + "%";
+}
+
+function formatRatio(value, decimals = 2) {
+  if (!isFinite(value)) return "\u221E";
+  return value.toFixed(decimals);
+}
+
+function computeExpectedValues(v) {
+  const total = v.tp + v.fp + v.fn + v.tn;
+  if (total === 0) return { tp: 0, fp: 0, fn: 0, tn: 0 };
+  const diseased = v.tp + v.fn;
+  const healthy = v.fp + v.tn;
+  const testPos = v.tp + v.fp;
+  const testNeg = v.fn + v.tn;
+  return {
+    tp: (diseased * testPos) / total,
+    fp: (healthy * testPos) / total,
+    fn: (diseased * testNeg) / total,
+    tn: (healthy * testNeg) / total,
+  };
+}
+
+function computeChiSquare(observed, expected) {
+  let chi2 = 0;
+  for (const key of ["tp", "fp", "fn", "tn"]) {
+    const e = expected[key];
+    if (e > 0) chi2 += (observed[key] - e) ** 2 / e;
+  }
+  return chi2;
+}
+
+function chiSquarePValue(chi2) {
+  if (chi2 <= 0) return 1;
+  return erfc(Math.sqrt(chi2 / 2));
+}
+
+function erfc(x) {
+  if (x < 0) return 2 - erfc(-x);
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+  const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+  const t = 1.0 / (1.0 + p * x);
+  return ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UTILS — geometry.js
+   ══════════════════════════════════════════════════════════════ */
+
+function computeBoxCorners(v) {
+  return {
+    upperLeft: { x: -v.fp, y: v.tp },
+    upperRight: { x: v.tn, y: v.tp },
+    lowerLeft: { x: -v.fp, y: -v.fn },
+    lowerRight: { x: v.tn, y: -v.fn },
+  };
+}
+
+function computeLayout(v, viewWidth, viewHeight, margin = 65) {
+  const extentRight = Math.max(v.tn, 1);
+  const extentLeft = Math.max(v.fp, 1);
+  const extentUp = Math.max(v.tp, 1);
+  const extentDown = Math.max(v.fn, 1);
+  const usableW = viewWidth - margin * 2;
+  const usableH = viewHeight - margin * 2;
+  const totalH = extentRight + extentLeft;
+  const totalV = extentUp + extentDown;
+  const scale = Math.min(usableW / totalH, usableH / totalV);
+  const centerX = margin + extentLeft * scale + (usableW - totalH * scale) / 2;
+  const centerY = margin + extentUp * scale + (usableH - totalV * scale) / 2;
+  return { centerX, centerY, scale };
+}
+
+function toSvg(diagramX, diagramY, centerX, centerY, scale) {
+  return { x: centerX + diagramX * scale, y: centerY - diagramY * scale };
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UTILS — trajectory.js
+   ══════════════════════════════════════════════════════════════ */
+
+function normalCDF(x) {
+  if (x < -8) return 0;
+  if (x > 8) return 1;
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+  const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+  const sign = x < 0 ? -1 : 1;
+  const t = 1.0 / (1.0 + p * Math.abs(x));
+  const y = 1 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x / 2);
+  return 0.5 * (1 + sign * y);
+}
+
+function normalQuantile(p) {
+  if (p <= 0) return -8;
+  if (p >= 1) return 8;
+  if (p === 0.5) return 0;
+  const a = [-3.969683028665376e1,2.209460984245205e2,-2.759285104469687e2,1.383577518672690e2,-3.066479806614716e1,2.506628277459239e0];
+  const b = [-5.447609879822406e1,1.615858368580409e2,-1.556989798598866e2,6.680131188771972e1,-1.328068155288572e1];
+  const c = [-7.784894002430293e-3,-3.223964580411365e-1,-2.400758277161838e0,-2.549732539343734e0,4.374664141464968e0,2.938163982698783e0];
+  const d = [7.784695709041462e-3,3.224671290700398e-1,2.445134137142996e0,3.754408661907416e0];
+  const pLow = 0.02425, pHigh = 1 - pLow;
+  let q, r;
+  if (p < pLow) {
+    q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  } else if (p <= pHigh) {
+    q = p - 0.5; r = q * q;
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5]) * q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+  } else {
+    q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  }
+}
+
+function computeDPrime(sensitivity, specificity) {
+  const s = Math.max(0.001, Math.min(0.999, sensitivity));
+  const sp = Math.max(0.001, Math.min(0.999, specificity));
+  return normalQuantile(s) + normalQuantile(sp);
+}
+
+function trajectoryPoint(dPrime, threshold, diseased, healthy) {
+  const half = dPrime / 2;
+  const sens = normalCDF(half - threshold);
+  const spec = normalCDF(half + threshold);
+  const tp = Math.round(sens * diseased);
+  const fn = diseased - tp;
+  const tn = Math.round(spec * healthy);
+  const fp = healthy - tn;
+  return { tp, fp, fn, tn };
+}
+
+function generateTrajectory(dPrime, steps = 100) {
+  const half = dPrime / 2;
+  const points = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = -4 + (8 * i) / steps;
+    points.push({ sensitivity: normalCDF(half - t), specificity: normalCDF(half + t) });
+  }
+  return points;
+}
+
+function thresholdFromSensitivity(dPrime, sensitivity) {
+  const s = Math.max(0.001, Math.min(0.999, sensitivity));
+  return dPrime / 2 - normalQuantile(s);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UTILS — colors & presets
+   ══════════════════════════════════════════════════════════════ */
+
+const CELL_COLORS = { tp: "#22c55e", fn: "#ef4444", tn: "#3b82f6", fp: "#eab308" };
+
+const presets = [
+  { name: "Balanced Example", description: "A moderate test with 50% prevalence", values: { tp: 80, fp: 20, fn: 20, tn: 80 } },
+  { name: "Perfect Test", description: "100% sensitivity and specificity", values: { tp: 100, fp: 0, fn: 0, tn: 100 } },
+  { name: "Worthless Test (All Positive)", description: "Test calls everyone positive", values: { tp: 50, fp: 50, fn: 0, tn: 0 } },
+  { name: "High Sensitivity, Low Specificity", description: "Good at detecting disease, many false alarms", values: { tp: 95, fp: 60, fn: 5, tn: 40 } },
+  { name: "Low Sensitivity, High Specificity", description: "Misses many cases, but rarely raises false alarms", values: { tp: 30, fp: 5, fn: 70, tn: 95 } },
+  { name: "High Sensitivity, High Specificity", description: "A strong test: 95% sensitivity, 95% specificity, 50% prevalence", values: { tp: 95, fp: 5, fn: 5, tn: 95 } },
+  { name: "PSA (Case-Control)", description: "PSA for prostate cancer: 85% sensitivity, 87% specificity, 37% prevalence", values: { tp: 301, fp: 79, fn: 53, tn: 531 } },
+  { name: "Low Prevalence Screening", description: "Same test accuracy but 5% prevalence", values: { tp: 43, fp: 124, fn: 7, tn: 826 } },
+];
+
+/* ══════════════════════════════════════════════════════════════
+   HOOK — useDiagramState
+   ══════════════════════════════════════════════════════════════ */
+
+function useDiagramState(initial = { tp: 80, fp: 20, fn: 20, tn: 80 }) {
+  const [values, setValues] = useState(initial);
+  const setValue = useCallback((key, val) => {
+    setValues((prev) => ({ ...prev, [key]: Math.max(0, Math.round(val)) }));
+  }, []);
+  const stats = useMemo(() => computeStats(values), [values]);
+  const corners = useMemo(() => computeBoxCorners(values), [values]);
+  return { values, stats, corners, setValues, setValue };
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DIAGRAM — SubjectBox
+   ══════════════════════════════════════════════════════════════ */
+
+function SubjectBox({ values, centerX, centerY, scale }) {
+  const { tp, fp, fn, tn } = values;
+  const ul = toSvg(-fp, tp, centerX, centerY, scale);
+  const ur = toSvg(tn, tp, centerX, centerY, scale);
+  const ll = toSvg(-fp, -fn, centerX, centerY, scale);
+  const width = ur.x - ul.x;
+  const height = ll.y - ul.y;
+  return (
+    <g className="subject-box">
+      <rect x={ul.x} y={ul.y} width={width} height={height} fill="none" stroke="#4f46e5" strokeWidth={2} />
+    </g>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DIAGRAM — Axes (two-line FP/TN labels)
+   ══════════════════════════════════════════════════════════════ */
+
+const AXIS_LABEL = { tp: "True positive", fn: "False negative", fp: "False positive", tn: "True negative" };
+
+function Axes({ centerX, centerY, scale, values }) {
+  const arrowSize = 7;
+  const axisOvershoot = 20;
+  const upLen = values.tp * scale + axisOvershoot;
+  const downLen = values.fn * scale + axisOvershoot;
+  const rightLen = values.tn * scale + axisOvershoot;
+  const leftLen = values.fp * scale + axisOvershoot;
+  const dim = "#94a3b8";
+  const labelColor = "#374151";
+
+  return (
+    <g className="axes">
+      {/* Up (TP) */}
+      <line x1={centerX} y1={centerY} x2={centerX} y2={centerY - upLen} stroke={dim} strokeWidth={1.5} />
+      <polygon points={`${centerX},${centerY - upLen - arrowSize} ${centerX - arrowSize/2},${centerY - upLen} ${centerX + arrowSize/2},${centerY - upLen}`} fill={dim} />
+      {/* Down (FN) */}
+      <line x1={centerX} y1={centerY} x2={centerX} y2={centerY + downLen} stroke={dim} strokeWidth={1.5} />
+      <polygon points={`${centerX},${centerY + downLen + arrowSize} ${centerX - arrowSize/2},${centerY + downLen} ${centerX + arrowSize/2},${centerY + downLen}`} fill={dim} />
+      {/* Right (TN) */}
+      <line x1={centerX} y1={centerY} x2={centerX + rightLen} y2={centerY} stroke={dim} strokeWidth={1.5} />
+      <polygon points={`${centerX + rightLen + arrowSize},${centerY} ${centerX + rightLen},${centerY - arrowSize/2} ${centerX + rightLen},${centerY + arrowSize/2}`} fill={dim} />
+      {/* Left (FP) */}
+      <line x1={centerX} y1={centerY} x2={centerX - leftLen} y2={centerY} stroke={dim} strokeWidth={1.5} />
+      <polygon points={`${centerX - leftLen - arrowSize},${centerY} ${centerX - leftLen},${centerY - arrowSize/2} ${centerX - leftLen},${centerY + arrowSize/2}`} fill={dim} />
+
+      {/* Labels */}
+      <text x={centerX} y={centerY - upLen - arrowSize - 6} textAnchor="middle" fontSize={13} fontWeight={500} fill={labelColor} style={{ userSelect: "none" }}>{AXIS_LABEL.tp}</text>
+      <text x={centerX} y={centerY + downLen + arrowSize + 16} textAnchor="middle" fontSize={13} fontWeight={500} fill={labelColor} style={{ userSelect: "none" }}>{AXIS_LABEL.fn}</text>
+
+      <text textAnchor="end" fontSize={13} fontWeight={500} fill={labelColor} style={{ userSelect: "none" }}>
+        <tspan x={centerX - leftLen - arrowSize - 6} y={centerY - 4}>False</tspan>
+        <tspan x={centerX - leftLen - arrowSize - 6} y={centerY + 12}>positive</tspan>
+      </text>
+
+      <text textAnchor="start" fontSize={13} fontWeight={500} fill={labelColor} style={{ userSelect: "none" }}>
+        <tspan x={centerX + rightLen + arrowSize + 6} y={centerY - 4}>True</tspan>
+        <tspan x={centerX + rightLen + arrowSize + 6} y={centerY + 12}>negative</tspan>
+      </text>
+    </g>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DIAGRAM — StatOverlays
+   ══════════════════════════════════════════════════════════════ */
+
+const OVERLAY_AXES = {
+  sensitivity: ["tp", "fn"],
+  specificity: ["tn", "fp"],
+  ppv: ["tp", "fp"],
+  npv: ["tn", "fn"],
+};
+const AXIS_DIR = {
+  tp: { dx: 0, dy: 1 },
+  fn: { dx: 0, dy: -1 },
+  fp: { dx: -1, dy: 0 },
+  tn: { dx: 1, dy: 0 },
+};
+const STROKE_W = 7;
+
+function StatOverlays({ values, centerX, centerY, scale, activeOverlays }) {
+  const activeAxes = new Set();
+  for (const ov of activeOverlays) {
+    const [a, b] = OVERLAY_AXES[ov];
+    activeAxes.add(a); activeAxes.add(b);
+  }
+  const origin = toSvg(0, 0, centerX, centerY, scale);
+  return (
+    <g className="stat-overlays">
+      {["tp", "fn", "fp", "tn"].map((cell) => {
+        if (!activeAxes.has(cell)) return null;
+        const len = values[cell];
+        if (len <= 0) return null;
+        const dir = AXIS_DIR[cell];
+        const end = toSvg(dir.dx * len, dir.dy * len, centerX, centerY, scale);
+        return <line key={cell} x1={origin.x} y1={origin.y} x2={end.x} y2={end.y} stroke={CELL_COLORS[cell]} strokeWidth={STROKE_W} strokeLinecap="round" />;
+      })}
+    </g>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DIAGRAM — VisualFormula
+   ══════════════════════════════════════════════════════════════ */
+
+const FORMULAS = {
+  sensitivity: { name: "Sensitivity", trueKey: "tp", falseKey: "fn" },
+  specificity: { name: "Specificity", trueKey: "tn", falseKey: "fp" },
+  ppv: { name: "PPV", trueKey: "tp", falseKey: "fp" },
+  npv: { name: "NPV", trueKey: "tn", falseKey: "fn" },
+};
+
+function ColorBar({ color }) {
+  return <span style={{ display: "inline-block", width: 36, height: 8, backgroundColor: color, borderRadius: 2, verticalAlign: "middle" }} />;
+}
+
+function Fraction({ numerator, denominator }) {
+  return (
+    <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", verticalAlign: "middle", margin: "0 6px", lineHeight: 1.3 }}>
+      <span style={{ padding: "0 4px" }}>{numerator}</span>
+      <span style={{ width: "100%", height: 1, backgroundColor: "#94a3b8" }} />
+      <span style={{ padding: "0 4px" }}>{denominator}</span>
+    </span>
+  );
+}
+
+function VisualFormula({ values, activeOverlays }) {
+  if (activeOverlays.length === 0) return null;
+  return (
+    <div className="mt-3 space-y-3">
+      {activeOverlays.map((overlay) => {
+        const def = FORMULAS[overlay];
+        const trueVal = values[def.trueKey];
+        const falseVal = values[def.falseKey];
+        const total = trueVal + falseVal;
+        const result = total > 0 ? ((trueVal / total) * 100).toFixed(0) : "0";
+        const trueColor = CELL_COLORS[def.trueKey];
+        const falseColor = CELL_COLORS[def.falseKey];
+        return (
+          <div key={overlay} className="flex items-center gap-1 text-sm text-slate-600 flex-wrap justify-center">
+            <span className="font-medium text-slate-700">{def.name}</span>
+            <span className="text-slate-400 mx-1">=</span>
+            <Fraction numerator={<ColorBar color={trueColor} />} denominator={<span className="flex items-center gap-1"><ColorBar color={trueColor} /><span className="text-xs text-slate-400">+</span><ColorBar color={falseColor} /></span>} />
+            <span className="text-slate-400 mx-1">=</span>
+            <Fraction numerator={<span className="text-sm tabular-nums" style={{ color: trueColor }}>{trueVal}</span>} denominator={<span className="text-sm tabular-nums"><span style={{ color: trueColor }}>{trueVal}</span><span className="text-slate-400"> + </span><span style={{ color: falseColor }}>{falseVal}</span></span>} />
+            <span className="text-slate-400 mx-1">=</span>
+            <span className="font-bold text-slate-800 text-base">{result}%</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DIAGRAM — DiagonalOverlays
+   ══════════════════════════════════════════════════════════════ */
+
+function DiagonalOverlays({ values, centerX, centerY, scale }) {
+  const { tp, fp, fn, tn } = values;
+  const ul = toSvg(-fp, tp, centerX, centerY, scale);
+  const lr = toSvg(tn, -fn, centerX, centerY, scale);
+  const origin = toSvg(0, 0, centerX, centerY, scale);
+  return (
+    <g className="diagonal-overlays">
+      <line x1={ul.x} y1={ul.y} x2={lr.x} y2={lr.y} stroke="#64748b" strokeWidth={2.5} strokeDasharray="6 4" opacity={0.7} />
+      {fp > 0 && tp > 0 && <line x1={origin.x} y1={origin.y} x2={ul.x} y2={ul.y} stroke="#ea580c" strokeWidth={2.5} opacity={0.85} />}
+      {fn > 0 && tn > 0 && <line x1={origin.x} y1={origin.y} x2={lr.x} y2={lr.y} stroke="#0d9488" strokeWidth={2.5} opacity={0.85} />}
+    </g>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DIAGRAM — TruthDiagram (main interactive SVG)
+   ══════════════════════════════════════════════════════════════ */
+
+const SVG_WIDTH = 560, SVG_HEIGHT = 500, CORNER_RADIUS = 6, CORNER_HIT_RADIUS = 12;
+
+function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg }) {
+  const svgRef = useRef(null);
+  const [dragMode, setDragMode] = useState(null);
+  const dragStart = useRef(null);
+  const [tooltip, setTooltip] = useState(null);
+  const [hoverCorner, setHoverCorner] = useState(null);
+
+  const computedLayout = useMemo(() => computeLayout(values, SVG_WIDTH, SVG_HEIGHT, 60), [values]);
+  const { centerX, centerY, scale } = dragMode && dragStart.current ? dragStart.current : computedLayout;
+
+  const getSvgPoint = useCallback((e) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
+    const point = new DOMPoint(e.clientX, e.clientY);
+    const svgPoint = point.matrixTransform(ctm.inverse());
+    return { x: svgPoint.x, y: svgPoint.y };
+  }, []);
+
+  const corners = useMemo(() => ({
+    ul: toSvg(-values.fp, values.tp, centerX, centerY, scale),
+    ur: toSvg(values.tn, values.tp, centerX, centerY, scale),
+    ll: toSvg(-values.fp, -values.fn, centerX, centerY, scale),
+    lr: toSvg(values.tn, -values.fn, centerX, centerY, scale),
+  }), [values, centerX, centerY, scale]);
+
+  const nearCorner = useCallback((pt) => {
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    if (dist(pt, corners.ul) < CORNER_HIT_RADIUS) return "corner-ul";
+    if (dist(pt, corners.ur) < CORNER_HIT_RADIUS) return "corner-ur";
+    if (dist(pt, corners.ll) < CORNER_HIT_RADIUS) return "corner-ll";
+    if (dist(pt, corners.lr) < CORNER_HIT_RADIUS) return "corner-lr";
+    return null;
+  }, [corners]);
+
+  const handleMouseDown = useCallback((e) => {
+    if (!onDrag) return;
+    const pt = getSvgPoint(e);
+    const corner = nearCorner(pt);
+    if (corner) {
+      setDragMode(corner);
+      dragStart.current = { x: pt.x, y: pt.y, values: { ...values }, centerX, centerY, scale };
+      e.preventDefault();
+      return;
+    }
+    const ul = corners.ul, lr = corners.lr;
+    if (pt.x >= ul.x && pt.x <= lr.x && pt.y >= ul.y && pt.y <= lr.y) {
+      setDragMode("box");
+      dragStart.current = { x: pt.x, y: pt.y, values: { ...values }, centerX, centerY, scale };
+      e.preventDefault();
+    }
+  }, [values, corners, onDrag, getSvgPoint, nearCorner]);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!dragMode || !dragStart.current || !onDrag) return;
+    const pt = getSvgPoint(e);
+    const orig = dragStart.current.values;
+    const { centerX: cx, centerY: cy, scale: s } = dragStart.current;
+    if (dragMode === "box") {
+      const dx = pt.x - dragStart.current.x, dy = pt.y - dragStart.current.y;
+      const dUnitsX = dx / s, dUnitsY = -dy / s;
+      const diseased = orig.tp + orig.fn, healthy = orig.fp + orig.tn;
+      const newTp = Math.round(Math.max(0, Math.min(diseased, orig.tp + dUnitsY)));
+      const newFn = diseased - newTp;
+      const newTn = Math.round(Math.max(0, Math.min(healthy, orig.tn + dUnitsX)));
+      const newFp = healthy - newTn;
+      onDrag({ tp: newTp, fp: newFp, fn: newFn, tn: newTn });
+    } else {
+      const diagX = (pt.x - cx) / s, diagY = -(pt.y - cy) / s;
+      let { tp, fp, fn, tn } = orig;
+      switch (dragMode) {
+        case "corner-ul": fp = Math.round(Math.max(0, -diagX)); tp = Math.round(Math.max(0, diagY)); break;
+        case "corner-ur": tn = Math.round(Math.max(0, diagX)); tp = Math.round(Math.max(0, diagY)); break;
+        case "corner-ll": fp = Math.round(Math.max(0, -diagX)); fn = Math.round(Math.max(0, -diagY)); break;
+        case "corner-lr": tn = Math.round(Math.max(0, diagX)); fn = Math.round(Math.max(0, -diagY)); break;
+      }
+      onDrag({ tp, fp, fn, tn });
+    }
+  }, [dragMode, onDrag, getSvgPoint]);
+
+  const handleMouseUp = useCallback(() => { setDragMode(null); dragStart.current = null; }, []);
+
+  useEffect(() => {
+    if (dragMode) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      return () => { window.removeEventListener("mousemove", handleMouseMove); window.removeEventListener("mouseup", handleMouseUp); };
+    }
+  }, [dragMode, handleMouseMove, handleMouseUp]);
+
+  const handleHover = useCallback((e) => {
+    if (dragMode) return;
+    const pt = getSvgPoint(e);
+    const corner = nearCorner(pt);
+    setHoverCorner(corner);
+    const origin = toSvg(0, 0, centerX, centerY, scale);
+    const ul = corners.ul, lr = corners.lr;
+    if (pt.x < ul.x || pt.x > lr.x || pt.y < ul.y || pt.y > lr.y) { setTooltip(null); return; }
+    let text;
+    if (pt.x < origin.x && pt.y < origin.y) text = `True Positives: ${values.tp}`;
+    else if (pt.x >= origin.x && pt.y < origin.y) text = `False Positives: ${values.fp}`;
+    else if (pt.x < origin.x && pt.y >= origin.y) text = `False Negatives: ${values.fn}`;
+    else text = `True Negatives: ${values.tn}`;
+    setTooltip({ x: pt.x + 12, y: pt.y - 12, text });
+  }, [values, centerX, centerY, scale, getSvgPoint, corners, nearCorner, dragMode]);
+
+  const getCursor = () => {
+    if (dragMode) {
+      if (dragMode === "box") return "grabbing";
+      if (dragMode === "corner-ul" || dragMode === "corner-lr") return "nwse-resize";
+      return "nesw-resize";
+    }
+    if (hoverCorner === "corner-ul" || hoverCorner === "corner-lr") return "nwse-resize";
+    if (hoverCorner === "corner-ur" || hoverCorner === "corner-ll") return "nesw-resize";
+    return "default";
+  };
+
+  return (
+    <div>
+      <svg ref={svgRef} viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`} className="w-full" style={{ cursor: getCursor(), maxHeight: "70vh" }}
+        onMouseDown={handleMouseDown} onMouseMove={handleHover} onMouseLeave={() => { setTooltip(null); setHoverCorner(null); }}>
+        <rect width={SVG_WIDTH} height={SVG_HEIGHT} fill="white" rx={8} />
+        <SubjectBox values={values} centerX={centerX} centerY={centerY} scale={scale} />
+        {overlays.length > 0 && <StatOverlays values={values} centerX={centerX} centerY={centerY} scale={scale} activeOverlays={overlays} />}
+        {renderExtraSvg?.({ centerX, centerY, scale })}
+        <Axes centerX={centerX} centerY={centerY} scale={scale} values={values} />
+        {onDrag && (
+          <g className="corner-handles">
+            {["ul", "ur", "ll", "lr"].map((key) => (
+              <circle key={key} cx={corners[key].x} cy={corners[key].y} r={CORNER_RADIUS}
+                fill={hoverCorner === `corner-${key}` || dragMode === `corner-${key}` ? "#64748b" : "#94a3b8"}
+                stroke="white" strokeWidth={1.5}
+                style={{ cursor: key === "ul" || key === "lr" ? "nwse-resize" : "nesw-resize" }}
+                onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); setDragMode(`corner-${key}`); const pt = getSvgPoint(e); dragStart.current = { x: pt.x, y: pt.y, values: { ...values }, centerX, centerY, scale }; }}
+              />
+            ))}
+          </g>
+        )}
+        {tooltip && (
+          <g>
+            <rect x={tooltip.x} y={tooltip.y - 16} width={tooltip.text.length * 7.5 + 16} height={24} fill="rgba(15, 23, 42, 0.9)" rx={4} />
+            <text x={tooltip.x + 8} y={tooltip.y} fontSize={12} fill="white" dominantBaseline="middle">{tooltip.text}</text>
+          </g>
+        )}
+        {onDrag && !dragMode && <text x={SVG_WIDTH / 2} y={SVG_HEIGHT - 8} textAnchor="middle" fontSize={11} fill="#94a3b8">Drag box to move · Drag corners to resize</text>}
+      </svg>
+      {overlays.length > 0 && <VisualFormula values={values} activeOverlays={overlays} />}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UI — InputPanel
+   ══════════════════════════════════════════════════════════════ */
+
+const inputFields = [
+  { key: "tp", label: "True Positives (TP)", color: CELL_COLORS.tp },
+  { key: "fp", label: "False Positives (FP)", color: CELL_COLORS.fp },
+  { key: "fn", label: "False Negatives (FN)", color: CELL_COLORS.fn },
+  { key: "tn", label: "True Negatives (TN)", color: CELL_COLORS.tn },
+];
+
+function InputPanel({ values, setValue, setValues }) {
+  return (
+    <div className="space-y-4">
+      <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Cell Values</h3>
+      <div className="grid grid-cols-2 gap-3">
+        {inputFields.map(({ key, label, color }) => (
+          <div key={key}>
+            <label className="block text-xs font-medium text-slate-600 mb-1">
+              <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: color }} />
+              {label}
+            </label>
+            <input type="number" min={0} value={values[key]} onChange={(e) => setValue(key, parseInt(e.target.value) || 0)}
+              className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent bg-white text-slate-800" />
+          </div>
+        ))}
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-slate-500 mb-1.5">Presets</label>
+        <select onChange={(e) => { const p = presets[parseInt(e.target.value)]; if (p) setValues(p.values); }} defaultValue=""
+          className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent bg-white text-slate-800">
+          <option value="" disabled>Load a preset...</option>
+          {presets.map((p, i) => <option key={p.name} value={i}>{p.name}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UI — StatsPanel
+   ══════════════════════════════════════════════════════════════ */
+
+function StatsPanelRow({ label, value, description, color }) {
+  return (
+    <div className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-slate-50">
+      <div className="flex items-center gap-2">
+        <span className="w-1.5 h-4 rounded-full" style={{ backgroundColor: color }} />
+        <div>
+          <span className="text-sm font-medium text-slate-700">{label}</span>
+          <span className="text-xs text-slate-400 ml-1.5">{description}</span>
+        </div>
+      </div>
+      <span className="text-sm font-semibold text-slate-800 tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+function StatsPanel({ stats }) {
+  const rows = [
+    { label: "Sensitivity", value: formatStat(stats.sensitivity), description: "TP / (TP + FN)", color: CELL_COLORS.tp },
+    { label: "Specificity", value: formatStat(stats.specificity), description: "TN / (TN + FP)", color: CELL_COLORS.tn },
+    { label: "PPV", value: formatStat(stats.ppv), description: "TP / (TP + FP)", color: CELL_COLORS.tp },
+    { label: "NPV", value: formatStat(stats.npv), description: "TN / (TN + FN)", color: CELL_COLORS.tn },
+    { label: "Accuracy", value: formatStat(stats.accuracy), description: "(TP + TN) / Total", color: "#64748b" },
+    { label: "Prevalence", value: formatStat(stats.prevalence), description: "(TP + FN) / Total", color: "#94a3b8" },
+  ];
+  const advancedRows = [
+    { label: "+LR", value: formatRatio(stats.positiveLR), description: "Sens / (1 \u2212 Spec)", color: "#ea580c" },
+    { label: "\u2212LR", value: formatRatio(stats.negativeLR), description: "(1 \u2212 Sens) / Spec", color: "#0d9488" },
+    { label: "Odds Ratio", value: formatRatio(stats.oddsRatio), description: "(TP\u00d7TN) / (FP\u00d7FN)", color: "#64748b" },
+  ];
+  return (
+    <div className="space-y-4">
+      <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Statistics</h3>
+      <div className="space-y-1.5">{rows.map((r) => <StatsPanelRow key={r.label} {...r} />)}</div>
+      <hr className="border-slate-100" />
+      <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Advanced</h3>
+      <div className="space-y-1.5">{advancedRows.map((r) => <StatsPanelRow key={r.label} {...r} />)}</div>
+      <div className="pt-2 text-xs text-slate-400">Total subjects: {stats.total}</div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LAYOUT — LessonLayout
+   ══════════════════════════════════════════════════════════════ */
+
+function LessonLayout({ meta, totalLessons, onPrev, onNext, onHome, diagram, children }) {
+  const isFirst = meta.number <= 1;
+  const isLast = meta.number >= totalLessons;
+  return (
+    <div className="flex flex-col h-full">
+      <div className="px-6 py-3 bg-white border-b border-slate-200 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-white bg-indigo-500 rounded-full px-2.5 py-0.5">{meta.number} / {totalLessons}</span>
+          <div>
+            <h2 className="text-base font-bold text-slate-800">{meta.title}</h2>
+            <p className="text-xs text-slate-500">{meta.subtitle}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {Array.from({ length: totalLessons }, (_, i) => (
+            <div key={i} className={`w-2 h-2 rounded-full ${i + 1 === meta.number ? "bg-indigo-500" : i + 1 < meta.number ? "bg-indigo-300" : "bg-slate-200"}`} />
+          ))}
+        </div>
+      </div>
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6 overflow-auto">
+        <div className="flex-1 min-w-0 lg:w-3/5">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">{diagram}</div>
+        </div>
+        <div className="w-full lg:w-2/5 shrink-0">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4 h-full overflow-auto">{children}</div>
+        </div>
+      </div>
+      <div className="px-6 py-3 bg-white border-t border-slate-200 flex items-center justify-between">
+        <button onClick={onHome} className="text-sm text-slate-500 hover:text-slate-700 transition-colors">&larr; Home</button>
+        <div className="flex items-center gap-3">
+          <button onClick={onPrev} disabled={isFirst} className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${isFirst ? "text-slate-300 cursor-not-allowed" : "text-slate-600 hover:bg-slate-100"}`}>&larr; Previous</button>
+          <button onClick={onNext} disabled={isLast} className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${isLast ? "text-slate-300 cursor-not-allowed" : "text-white bg-indigo-500 hover:bg-indigo-600"}`}>Next &rarr;</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LESSON 1 — The 2x2 Table
+   ══════════════════════════════════════════════════════════════ */
+
+function Lesson1_Table({ values, setValue, setValues, totalLessons, onPrev, onNext, onHome }) {
+  const { tp, fp, fn, tn } = values;
+  const diseased = tp + fn, healthy = fp + tn, testPos = tp + fp, testNeg = fn + tn, total = tp + fp + fn + tn;
+  return (
+    <LessonLayout meta={{ number: 1, title: "The 2\u00d72 Table", subtitle: "Understanding the contingency table for diagnostic testing" }}
+      totalLessons={totalLessons} onPrev={onPrev} onNext={onNext} onHome={onHome}
+      diagram={<TruthDiagram values={values} onDrag={setValues} />}>
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">The Contingency Table</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">Every diagnostic test produces a 2&times;2 contingency table. Each patient falls into one of four cells based on two questions: <strong>Does the patient truly have the disease?</strong> and <strong>Did the test say positive?</strong></p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead><tr><th className="p-2"></th><th className="p-2 text-center font-semibold text-slate-600 border-b-2 border-slate-200">Disease +</th><th className="p-2 text-center font-semibold text-slate-600 border-b-2 border-slate-200">Disease &minus;</th><th className="p-2 text-center font-semibold text-slate-400 border-b-2 border-slate-100">Total</th></tr></thead>
+            <tbody>
+              <tr><td className="p-2 font-semibold text-slate-600 border-r-2 border-slate-200">Test +</td><td className="p-2 text-center"><span className="inline-block px-3 py-1 rounded-md bg-green-50 text-green-700 font-bold border border-green-200">TP = {tp}</span></td><td className="p-2 text-center"><span className="inline-block px-3 py-1 rounded-md bg-yellow-50 text-yellow-700 font-bold border border-yellow-200">FP = {fp}</span></td><td className="p-2 text-center text-slate-400 font-medium">{testPos}</td></tr>
+              <tr><td className="p-2 font-semibold text-slate-600 border-r-2 border-slate-200">Test &minus;</td><td className="p-2 text-center"><span className="inline-block px-3 py-1 rounded-md bg-red-50 text-red-700 font-bold border border-red-200">FN = {fn}</span></td><td className="p-2 text-center"><span className="inline-block px-3 py-1 rounded-md bg-blue-50 text-blue-700 font-bold border border-blue-200">TN = {tn}</span></td><td className="p-2 text-center text-slate-400 font-medium">{testNeg}</td></tr>
+              <tr className="border-t-2 border-slate-200"><td className="p-2 font-semibold text-slate-400">Total</td><td className="p-2 text-center text-slate-400 font-medium">{diseased}</td><td className="p-2 text-center text-slate-400 font-medium">{healthy}</td><td className="p-2 text-center text-slate-500 font-bold">{total}</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">What Each Cell Means</h3>
+          <div className="grid grid-cols-1 gap-2 text-sm">
+            <div className="flex items-start gap-2"><span className="w-2.5 h-2.5 rounded-full bg-green-500 mt-1 shrink-0" /><span className="text-slate-600"><strong className="text-green-700">True Positive (TP):</strong> Patient has the disease AND the test correctly says positive.</span></div>
+            <div className="flex items-start gap-2"><span className="w-2.5 h-2.5 rounded-full bg-yellow-600 mt-1 shrink-0" /><span className="text-slate-600"><strong className="text-yellow-700">False Positive (FP):</strong> Patient is healthy BUT the test incorrectly says positive.</span></div>
+            <div className="flex items-start gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500 mt-1 shrink-0" /><span className="text-slate-600"><strong className="text-red-700">False Negative (FN):</strong> Patient has the disease BUT the test incorrectly says negative.</span></div>
+            <div className="flex items-start gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 mt-1 shrink-0" /><span className="text-slate-600"><strong className="text-blue-700">True Negative (TN):</strong> Patient is healthy AND the test correctly says negative.</span></div>
+          </div>
+        </div>
+        <hr className="border-slate-100" />
+        <InputPanel values={values} setValue={setValue} setValues={setValues} />
+        <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3"><strong>Try it:</strong> Change the values above or load a preset. Watch how the diagram on the left updates to reflect the table. The diagram is a visual transformation of this same 2&times;2 table.</div>
+      </div>
+    </LessonLayout>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LESSON 2 — Box & Axes
+   ══════════════════════════════════════════════════════════════ */
+
+function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome }) {
+  const { tp, fp, fn, tn } = values;
+  const diseased = tp + fn, healthy = fp + tn;
+  const ratio = diseased > 0 && healthy > 0 ? diseased / healthy : 1;
+  let shapeDesc;
+  if (ratio > 1.3) shapeDesc = "tall and narrow (high prevalence)";
+  else if (ratio < 0.77) shapeDesc = "short and wide (low prevalence)";
+  else shapeDesc = "roughly square (50% prevalence)";
+  return (
+    <LessonLayout meta={{ number: 2, title: "The Box and Axes", subtitle: "How the 2\u00d72 table becomes a diagram" }}
+      totalLessons={totalLessons} onPrev={onPrev} onNext={onNext} onHome={onHome}
+      diagram={<TruthDiagram values={values} onDrag={setValues} />}>
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">The Coordinate System</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">The truth diagram uses four half-axes radiating from a shared origin, like a + sign. Each axis represents one cell of the 2&times;2 table:</p>
+          <ul className="mt-2 space-y-1 text-sm text-slate-600">
+            <li className="flex items-center gap-2"><span className="font-bold text-green-600">&uarr; Up</span> = True Positives (TP)</li>
+            <li className="flex items-center gap-2"><span className="font-bold text-red-600">&darr; Down</span> = False Negatives (FN)</li>
+            <li className="flex items-center gap-2"><span className="font-bold text-yellow-600">&larr; Left</span> = False Positives (FP)</li>
+            <li className="flex items-center gap-2"><span className="font-bold text-blue-600">&rarr; Right</span> = True Negatives (TN)</li>
+          </ul>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">The Subject Box</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">A rectangle is placed on this coordinate system so that the origin always lies inside the box. The axes divide the box into four quadrants &mdash; one for each cell.</p>
+          <div className="mt-3 bg-slate-50 rounded-lg p-3 space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-slate-500">Vertical side (diseased):</span><span className="font-semibold text-slate-700">TP + FN = {tp} + {fn} = {diseased}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Horizontal side (healthy):</span><span className="font-semibold text-slate-700">FP + TN = {fp} + {tn} = {healthy}</span></div>
+          </div>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">Box Shape = Prevalence</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">The shape of the box reflects how common the disease is in the study population.</p>
+          <div className="mt-3 bg-indigo-50 rounded-lg p-3 text-sm">
+            <div className="flex justify-between"><span className="text-indigo-600">Current prevalence:</span><span className="font-bold text-indigo-700">{formatStat(stats.prevalence)}</span></div>
+            <p className="mt-1 text-xs text-indigo-500">The box is currently {shapeDesc}.</p>
+          </div>
+        </div>
+        <hr className="border-slate-100" />
+        <InputPanel values={values} setValue={setValue} setValues={setValues} />
+        <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3"><strong>Try it:</strong> Drag the box to move it around and watch how the four quadrant values change. Drag a corner to resize it and see how the box shape (prevalence) changes.</div>
+      </div>
+    </LessonLayout>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LESSON 3 — Sensitivity & Specificity
+   ══════════════════════════════════════════════════════════════ */
+
+function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome }) {
+  const { tp, fp, fn, tn } = values;
+  const diseased = tp + fn, healthy = fp + tn;
+  return (
+    <LessonLayout meta={{ number: 3, title: "Sensitivity & Specificity", subtitle: "How well does the test detect disease and health?" }}
+      totalLessons={totalLessons} onPrev={onPrev} onNext={onNext} onHome={onHome}
+      diagram={<TruthDiagram values={values} onDrag={setValues} overlays={["sensitivity", "specificity"]} />}>
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-sm font-bold text-green-700 uppercase tracking-wide mb-2">Sensitivity</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">Sensitivity measures how well the test detects disease. It is the proportion of diseased patients who test positive.</p>
+          <div className="mt-3 bg-green-50 rounded-lg p-3 space-y-2">
+            <div className="text-sm font-mono text-green-800">Sensitivity = TP / (TP + FN)</div>
+            <div className="text-sm font-mono text-green-800">= {tp} / ({tp} + {fn}) = {tp} / {diseased}</div>
+            <div className="text-lg font-bold text-green-700">= {formatStat(stats.sensitivity)}</div>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">On the diagram, the <span style={{color:"#22c55e"}} className="font-semibold">green TP hemiaxis</span> (up) and the <span style={{color:"#ef4444"}} className="font-semibold">red FN hemiaxis</span> (down) are highlighted.</p>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-2">Specificity</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">Specificity measures how well the test identifies healthy patients.</p>
+          <div className="mt-3 bg-blue-50 rounded-lg p-3 space-y-2">
+            <div className="text-sm font-mono text-blue-800">Specificity = TN / (TN + FP)</div>
+            <div className="text-sm font-mono text-blue-800">= {tn} / ({tn} + {fp}) = {tn} / {healthy}</div>
+            <div className="text-lg font-bold text-blue-700">= {formatStat(stats.specificity)}</div>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">On the diagram, the <span style={{color:"#3b82f6"}} className="font-semibold">blue TN hemiaxis</span> (right) and the <span style={{color:"#eab308"}} className="font-semibold">yellow FP hemiaxis</span> (left) are highlighted.</p>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p className="text-sm text-amber-800"><strong>Key insight:</strong> Sensitivity and specificity are properties of the <em>test itself</em>. They do <strong>not</strong> depend on prevalence.</p>
+        </div>
+        <hr className="border-slate-100" />
+        <InputPanel values={values} setValue={setValue} setValues={setValues} />
+        <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3"><strong>Try it:</strong> Drag the box up to increase sensitivity. Drag it right to increase specificity. Notice how improving one tends to worsen the other.</div>
+      </div>
+    </LessonLayout>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LESSON 4 — Predictive Values
+   ══════════════════════════════════════════════════════════════ */
+
+function Lesson4_PredValues({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome }) {
+  const { tp, fp, fn, tn } = values;
+  const testPos = tp + fp, testNeg = fn + tn;
+  const [showComparison, setShowComparison] = useState(false);
+  const lowPrevTotal = 1000, lowPrevDiseased = 50, lowPrevHealthy = lowPrevTotal - lowPrevDiseased;
+  const lowPrevTp = Math.round(stats.sensitivity * lowPrevDiseased);
+  const lowPrevFn = lowPrevDiseased - lowPrevTp;
+  const lowPrevTn = Math.round(stats.specificity * lowPrevHealthy);
+  const lowPrevFp = lowPrevHealthy - lowPrevTn;
+  const lowPrevValues = { tp: lowPrevTp, fp: lowPrevFp, fn: lowPrevFn, tn: lowPrevTn };
+  const lowPrevStats = computeStats(lowPrevValues);
+  return (
+    <LessonLayout meta={{ number: 4, title: "Predictive Values", subtitle: "What a test result means for the patient" }}
+      totalLessons={totalLessons} onPrev={onPrev} onNext={onNext} onHome={onHome}
+      diagram={<TruthDiagram values={showComparison ? lowPrevValues : values} onDrag={showComparison ? undefined : setValues} overlays={["ppv", "npv"]} />}>
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-sm font-bold text-green-700 uppercase tracking-wide mb-2">Positive Predictive Value (PPV)</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">If a patient tests positive, what is the probability they actually have the disease?</p>
+          <div className="mt-3 bg-green-50 rounded-lg p-3 space-y-2">
+            <div className="text-sm font-mono text-green-800">PPV = TP / (TP + FP)</div>
+            <div className="text-sm font-mono text-green-800">= {tp} / ({tp} + {fp}) = {tp} / {testPos}</div>
+            <div className="text-lg font-bold text-green-700">= {formatStat(stats.ppv)}</div>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">On the diagram, the <span style={{color:"#22c55e"}} className="font-semibold">green TP hemiaxis</span> (up) and the <span style={{color:"#eab308"}} className="font-semibold">yellow FP hemiaxis</span> (left) are highlighted.</p>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-2">Negative Predictive Value (NPV)</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">If a patient tests negative, what is the probability they are truly healthy?</p>
+          <div className="mt-3 bg-blue-50 rounded-lg p-3 space-y-2">
+            <div className="text-sm font-mono text-blue-800">NPV = TN / (TN + FN)</div>
+            <div className="text-sm font-mono text-blue-800">= {tn} / ({tn} + {fn}) = {tn} / {testNeg}</div>
+            <div className="text-lg font-bold text-blue-700">= {formatStat(stats.npv)}</div>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">On the diagram, the <span style={{color:"#3b82f6"}} className="font-semibold">blue TN hemiaxis</span> (right) and the <span style={{color:"#ef4444"}} className="font-semibold">red FN hemiaxis</span> (down) are highlighted.</p>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+          <p className="text-sm text-amber-800"><strong>Key insight:</strong> Unlike sensitivity and specificity, PPV and NPV <strong>depend on prevalence</strong>.</p>
+          <button onClick={() => setShowComparison(!showComparison)} className="mt-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-200 text-amber-800 hover:bg-amber-300 transition-colors">
+            {showComparison ? "Show original values" : "Show same test at 5% prevalence"}
+          </button>
+        </div>
+        {showComparison && (
+          <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+            <h4 className="text-xs font-bold text-slate-600 uppercase">Prevalence Comparison</h4>
+            <table className="w-full text-xs">
+              <thead><tr><th className="text-left p-1 text-slate-500"></th><th className="text-center p-1 text-slate-500">Original ({formatStat(stats.prevalence)})</th><th className="text-center p-1 text-slate-500">Low prev (5%)</th></tr></thead>
+              <tbody>
+                <tr><td className="p-1 text-slate-600">Sensitivity</td><td className="p-1 text-center font-medium">{formatStat(stats.sensitivity)}</td><td className="p-1 text-center font-medium">{formatStat(lowPrevStats.sensitivity)}</td></tr>
+                <tr><td className="p-1 text-slate-600">Specificity</td><td className="p-1 text-center font-medium">{formatStat(stats.specificity)}</td><td className="p-1 text-center font-medium">{formatStat(lowPrevStats.specificity)}</td></tr>
+                <tr className="bg-amber-50"><td className="p-1 text-green-700 font-semibold">PPV</td><td className="p-1 text-center font-bold text-green-700">{formatStat(stats.ppv)}</td><td className="p-1 text-center font-bold text-green-700">{formatStat(lowPrevStats.ppv)}</td></tr>
+                <tr className="bg-amber-50"><td className="p-1 text-blue-700 font-semibold">NPV</td><td className="p-1 text-center font-bold text-blue-700">{formatStat(stats.npv)}</td><td className="p-1 text-center font-bold text-blue-700">{formatStat(lowPrevStats.npv)}</td></tr>
+              </tbody>
+            </table>
+            <p className="text-xs text-slate-500 mt-1">Notice: sensitivity and specificity stay the same, but PPV drops dramatically at low prevalence.</p>
+          </div>
+        )}
+        {!showComparison && (<><hr className="border-slate-100" /><InputPanel values={values} setValue={setValue} setValues={setValues} /></>)}
+        <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3"><strong>Try it:</strong> Use the &quot;Low Prevalence Screening&quot; preset to see how PPV drops even with a good test.</div>
+      </div>
+    </LessonLayout>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LESSON 5 — Trajectory & ROC (with preset dropdown)
+   ══════════════════════════════════════════════════════════════ */
+
+const ROC_SIZE = 220, ROC_PAD = 32;
+
+function RocCurve({ trajectory, currentSens, currentFpr }) {
+  const s = ROC_SIZE - ROC_PAD * 2;
+  const tx = (fpr) => ROC_PAD + fpr * s;
+  const ty = (sens) => ROC_PAD + (1 - sens) * s;
+  const pathD = trajectory.map((p, i) => {
+    const x = tx(1 - p.specificity), y = ty(p.sensitivity);
+    return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return (
+    <svg viewBox={`0 0 ${ROC_SIZE} ${ROC_SIZE}`} style={{ width: "100%", maxWidth: ROC_SIZE, background: "white", borderRadius: 8 }}>
+      <rect width={ROC_SIZE} height={ROC_SIZE} fill="white" rx={8} />
+      <line x1={ROC_PAD} y1={ROC_PAD} x2={ROC_PAD} y2={ROC_SIZE - ROC_PAD} stroke="#cbd5e1" strokeWidth={1} />
+      <line x1={ROC_PAD} y1={ROC_SIZE - ROC_PAD} x2={ROC_SIZE - ROC_PAD} y2={ROC_SIZE - ROC_PAD} stroke="#cbd5e1" strokeWidth={1} />
+      <line x1={ROC_PAD} y1={ROC_SIZE - ROC_PAD} x2={ROC_SIZE - ROC_PAD} y2={ROC_PAD} stroke="#ef4444" strokeWidth={1} strokeDasharray="4 3" opacity={0.5} />
+      <path d={pathD} fill="none" stroke="#4f46e5" strokeWidth={2} />
+      <circle cx={tx(currentFpr)} cy={ty(currentSens)} r={5} fill="#4f46e5" stroke="white" strokeWidth={1.5} />
+      <text x={ROC_SIZE / 2} y={ROC_SIZE - 6} textAnchor="middle" fontSize={10} fill="#94a3b8">1 − Specificity (FPR)</text>
+      <text x={10} y={ROC_SIZE / 2} textAnchor="middle" fontSize={10} fill="#94a3b8" transform={`rotate(-90, 10, ${ROC_SIZE / 2})`}>Sensitivity (TPR)</text>
+    </svg>
+  );
+}
+
+function Lesson5_Trajectory({ values, stats, setValues, totalLessons, onPrev, onNext, onHome }) {
+  const diseased = values.tp + values.fn, healthy = values.fp + values.tn;
+  const dPrime = useMemo(() => computeDPrime(stats.sensitivity, stats.specificity), [stats.sensitivity, stats.specificity]);
+  const initialThreshold = useMemo(() => thresholdFromSensitivity(dPrime, stats.sensitivity), [dPrime, stats.sensitivity]);
+  const [threshold, setThreshold] = useState(initialThreshold);
+
+  useEffect(() => {
+    setThreshold(thresholdFromSensitivity(dPrime, stats.sensitivity));
+  }, [values.tp, values.fp, values.fn, values.tn]);
+
+  const sliderValues = useMemo(() => trajectoryPoint(dPrime, threshold, diseased, healthy), [dPrime, threshold, diseased, healthy]);
+  const sliderStats = useMemo(() => computeStats(sliderValues), [sliderValues]);
+  const trajectory = useMemo(() => generateTrajectory(dPrime, 120), [dPrime]);
+
+  return (
+    <LessonLayout meta={{ number: 5, title: "Test Trajectory & ROC", subtitle: "How the threshold tradeoff shapes the diagram" }}
+      totalLessons={totalLessons} onPrev={onPrev} onNext={onNext} onHome={onHome}
+      diagram={<TruthDiagram values={sliderValues} overlays={["sensitivity", "specificity"]} />}>
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">The Threshold Tradeoff</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">Most diagnostic tests have an adjustable threshold. Moving it changes the balance between sensitivity and specificity &mdash; you can&rsquo;t improve both at once.</p>
+        </div>
+        <div className="bg-slate-50 rounded-lg p-3">
+          <label className="text-xs font-semibold text-slate-500 uppercase block mb-2">Threshold Slider</label>
+          <input type="range" min={-3.5} max={3.5} step={0.05} value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} className="w-full accent-indigo-500" />
+          <div className="flex justify-between text-xs text-slate-400 mt-1"><span>&larr; More sensitive</span><span>More specific &rarr;</span></div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-green-50 rounded-lg p-3 text-center">
+            <div className="text-xs text-green-600 font-semibold uppercase">Sensitivity</div>
+            <div className="text-lg font-bold text-green-700">{formatStat(sliderStats.sensitivity)}</div>
+            <div className="text-xs text-green-500">TP={sliderValues.tp} FN={sliderValues.fn}</div>
+          </div>
+          <div className="bg-blue-50 rounded-lg p-3 text-center">
+            <div className="text-xs text-blue-600 font-semibold uppercase">Specificity</div>
+            <div className="text-lg font-bold text-blue-700">{formatStat(sliderStats.specificity)}</div>
+            <div className="text-xs text-blue-500">TN={sliderValues.tn} FP={sliderValues.fp}</div>
+          </div>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">ROC Curve</h3>
+          <RocCurve trajectory={trajectory} currentSens={sliderStats.sensitivity} currentFpr={1 - sliderStats.specificity} />
+          <p className="text-xs text-slate-500 mt-2">The <strong className="text-indigo-600">blue curve</strong> shows all possible sensitivity/specificity pairs. The <span className="text-red-400">dashed red line</span> is a worthless test. The <strong className="text-indigo-600">dot</strong> marks the current threshold.</p>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p className="text-sm text-amber-800"><strong>Key insight:</strong> The truth diagram and ROC curve contain similar information, but the diagram preserves <em>prevalence</em>. d&prime; = <strong>{dPrime.toFixed(2)}</strong>.</p>
+        </div>
+        {/* Preset selector */}
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1.5">Presets</label>
+          <select onChange={(e) => { const p = presets[parseInt(e.target.value)]; if (p) setValues(p.values); }} defaultValue=""
+            className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent bg-white text-slate-800">
+            <option value="" disabled>Load a preset...</option>
+            {presets.map((p, i) => <option key={p.name} value={i}>{p.name}</option>)}
+          </select>
+        </div>
+        <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3"><strong>Try it:</strong> Move the slider left to increase sensitivity at the cost of specificity. Watch the box shape stay the same while its position changes.</div>
+      </div>
+    </LessonLayout>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LESSON 6 — Likelihood Ratios & Bayes (with preset dropdown)
+   ══════════════════════════════════════════════════════════════ */
+
+function Lesson6_LikelihoodRatios({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome }) {
+  const { tp, fp, fn, tn } = values;
+  const diseased = tp + fn, healthy = fp + tn;
+  const pretestOdds = healthy > 0 ? diseased / healthy : Infinity;
+  const posttestOddsPos = fp > 0 ? tp / fp : Infinity;
+  const posttestOddsNeg = tn > 0 ? fn / tn : 0;
+  const posLR = stats.positiveLR, negLR = stats.negativeLR;
+  return (
+    <LessonLayout meta={{ number: 6, title: "Likelihood Ratios & Bayes", subtitle: "How slopes encode odds and connect pre- to post-test" }}
+      totalLessons={totalLessons} onPrev={onPrev} onNext={onNext} onHome={onHome}
+      diagram={<TruthDiagram values={values} onDrag={setValues} overlays={[]} renderExtraSvg={(layout) => <DiagonalOverlays values={values} centerX={layout.centerX} centerY={layout.centerY} scale={layout.scale} />} />}>
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">Pretest Odds</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">The <strong className="text-slate-500">dashed gray diagonal</strong> connects the upper-left to lower-right corners. Its slope magnitude = diseased / healthy.</p>
+          <div className="mt-2 bg-slate-50 rounded-lg p-3 space-y-1">
+            <div className="text-sm font-mono text-slate-700">Pretest odds = Diseased / Healthy</div>
+            <div className="text-sm font-mono text-slate-700">= {diseased} / {healthy} = <strong>{formatRatio(pretestOdds)}</strong></div>
+            <div className="text-xs text-slate-500 mt-1">(Prevalence = {formatStat(stats.prevalence)})</div>
+          </div>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">Posttest Odds</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">The diagonals from the origin to two box corners represent posttest odds:</p>
+          <div className="mt-3 bg-orange-50 rounded-lg p-3 space-y-1">
+            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#ea580c" }} /><span className="text-xs font-semibold text-orange-700 uppercase">Positive test (origin &rarr; upper-left)</span></div>
+            <div className="text-sm font-mono text-orange-800">Posttest odds (+) = <span style={{ color: CELL_COLORS.tp }}>TP</span> / <span style={{ color: CELL_COLORS.fp }}>FP</span> = <span style={{ color: CELL_COLORS.tp }}>{tp}</span> / <span style={{ color: CELL_COLORS.fp }}>{fp}</span> = <strong>{formatRatio(posttestOddsPos)}</strong></div>
+          </div>
+          <div className="mt-2 bg-teal-50 rounded-lg p-3 space-y-1">
+            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#0d9488" }} /><span className="text-xs font-semibold text-teal-700 uppercase">Negative test (origin &rarr; lower-right)</span></div>
+            <div className="text-sm font-mono text-teal-800">Posttest odds (&minus;) = <span style={{ color: CELL_COLORS.fn }}>FN</span> / <span style={{ color: CELL_COLORS.tn }}>TN</span> = <span style={{ color: CELL_COLORS.fn }}>{fn}</span> / <span style={{ color: CELL_COLORS.tn }}>{tn}</span> = <strong>{formatRatio(posttestOddsNeg)}</strong></div>
+          </div>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">Likelihood Ratios</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">The likelihood ratio connects pre- to post-test odds. It depends only on test accuracy, not prevalence.</p>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="bg-orange-50 rounded-lg p-3 text-center">
+              <div className="text-xs text-orange-600 font-semibold uppercase">+LR</div>
+              <div className="text-sm font-mono text-orange-800 mt-1">Sens / (1&minus;Spec)</div>
+              <div className="text-lg font-bold text-orange-700">{formatRatio(posLR)}</div>
+            </div>
+            <div className="bg-teal-50 rounded-lg p-3 text-center">
+              <div className="text-xs text-teal-600 font-semibold uppercase">&minus;LR</div>
+              <div className="text-sm font-mono text-teal-800 mt-1">(1&minus;Sens) / Spec</div>
+              <div className="text-lg font-bold text-teal-700">{formatRatio(negLR)}</div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+          <h3 className="text-sm font-bold text-amber-800 uppercase tracking-wide">Bayes&rsquo; Rule (Odds Form)</h3>
+          <p className="text-sm text-amber-800 leading-relaxed">Posttest odds = Pretest odds &times; LR</p>
+          <div className="space-y-1 text-sm font-mono text-amber-900">
+            <div><strong>+ test:</strong> {formatRatio(pretestOdds)} &times; {formatRatio(posLR)} = <strong>{formatRatio(pretestOdds * posLR)}</strong> <span className="text-xs text-amber-600">(actual: {formatRatio(posttestOddsPos)})</span></div>
+            <div><strong>&minus; test:</strong> {formatRatio(pretestOdds)} &times; {formatRatio(negLR)} = <strong>{formatRatio(pretestOdds * negLR)}</strong> <span className="text-xs text-amber-600">(actual: {formatRatio(posttestOddsNeg)})</span></div>
+          </div>
+          <p className="text-xs text-amber-700 mt-1">Small rounding differences arise because the cells are integers. On the diagram, each diagonal&rsquo;s slope encodes one set of odds.</p>
+        </div>
+        {/* Preset selector */}
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1.5">Presets</label>
+          <select onChange={(e) => { const p = presets[parseInt(e.target.value)]; if (p) setValues(p.values); }} defaultValue=""
+            className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent bg-white text-slate-800">
+            <option value="" disabled>Load a preset...</option>
+            {presets.map((p, i) => <option key={p.name} value={i}>{p.name}</option>)}
+          </select>
+        </div>
+        <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3"><strong>Key insight:</strong> The truth diagram encodes odds as slopes of diagonals. The <strong className="text-slate-500">dashed diagonal</strong> shows pretest odds. The <strong style={{ color: "#ea580c" }}>orange segment</strong> shows posttest odds after a positive test, and the <strong style={{ color: "#0d9488" }}>teal segment</strong> shows posttest odds after a negative test.</div>
+      </div>
+    </LessonLayout>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LESSON 7 — Chi-Square Test
+   ══════════════════════════════════════════════════════════════ */
+
+function GhostExpectedBox({ expected, centerX, centerY, scale }) {
+  const ul = toSvg(-expected.fp, expected.tp, centerX, centerY, scale);
+  const ur = toSvg(expected.tn, expected.tp, centerX, centerY, scale);
+  const ll = toSvg(-expected.fp, -expected.fn, centerX, centerY, scale);
+  const lr = toSvg(expected.tn, -expected.fn, centerX, centerY, scale);
+  const pathD = `M${ul.x},${ul.y} L${ur.x},${ur.y} L${lr.x},${lr.y} L${ll.x},${ll.y} Z`;
+  return (
+    <g className="ghost-expected">
+      <path d={pathD} fill="none" stroke="#94a3b8" strokeWidth={2} strokeDasharray="8 4" opacity={0.6} />
+      <text x={ur.x + 4} y={ur.y - 6} fontSize={10} fill="#94a3b8" fontWeight={500}>Expected</text>
+    </g>
+  );
+}
+
+function Lesson7_ChiSquare({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome }) {
+  const [showExpected, setShowExpected] = useState(false);
+  const expected = useMemo(() => computeExpectedValues(values), [values]);
+  const chi2 = useMemo(() => computeChiSquare(values, expected), [values, expected]);
+  const pValue = useMemo(() => chiSquarePValue(chi2), [chi2]);
+  const cells = ["tp", "fp", "fn", "tn"].map((key) => {
+    const o = values[key], e = expected[key], contrib = e > 0 ? (o - e) ** 2 / e : 0;
+    return { key, label: key.toUpperCase(), o, e, contrib };
+  });
+  const displayValues = showExpected ? { tp: Math.round(expected.tp), fp: Math.round(expected.fp), fn: Math.round(expected.fn), tn: Math.round(expected.tn) } : values;
+  const ghostValues = showExpected ? { tp: values.tp, fp: values.fp, fn: values.fn, tn: values.tn } : expected;
+  return (
+    <LessonLayout meta={{ number: 7, title: "Chi-Square Test", subtitle: "Measuring departure from chance" }}
+      totalLessons={totalLessons} onPrev={onPrev} onNext={onNext} onHome={onHome}
+      diagram={<TruthDiagram values={displayValues} onDrag={showExpected ? undefined : setValues} overlays={[]} renderExtraSvg={(layout) => <GhostExpectedBox expected={ghostValues} centerX={layout.centerX} centerY={layout.centerY} scale={layout.scale} />} />}>
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">Observed vs. Expected</h3>
+          <p className="text-sm text-slate-600 leading-relaxed">Under the null hypothesis of no association, the expected cell counts are:</p>
+          <div className="mt-2 bg-slate-50 rounded-lg p-3"><div className="text-sm font-mono text-slate-700">E = (row total &times; column total) / grand total</div></div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setShowExpected(false)} className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${!showExpected ? "bg-indigo-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>Observed (solid)</button>
+          <button onClick={() => setShowExpected(true)} className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${showExpected ? "bg-indigo-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>Expected (solid)</button>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">Expected Values</h3>
+          <div className="bg-slate-50 rounded-lg overflow-hidden">
+            <table className="w-full text-xs">
+              <thead><tr className="bg-slate-100"><th className="p-2 text-left text-slate-500">Cell</th><th className="p-2 text-center text-slate-500">Observed</th><th className="p-2 text-center text-slate-500">Expected</th><th className="p-2 text-center text-slate-500">(O&minus;E)&sup2;/E</th></tr></thead>
+              <tbody>{cells.map((c) => (
+                <tr key={c.key} className="border-t border-slate-100"><td className="p-2 font-semibold text-slate-700">{c.label}</td><td className="p-2 text-center font-mono">{c.o}</td><td className="p-2 text-center font-mono text-slate-500">{c.e.toFixed(1)}</td><td className="p-2 text-center font-mono font-semibold">{c.contrib.toFixed(2)}</td></tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </div>
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-2">
+          <h3 className="text-sm font-bold text-indigo-800 uppercase tracking-wide">&chi;&sup2; Result</h3>
+          <div className="text-sm font-mono text-indigo-800">&chi;&sup2; = &Sigma;(O&minus;E)&sup2;/E = <strong className="text-lg">{formatRatio(chi2)}</strong></div>
+          <div className="text-sm text-indigo-700">p-value = <strong>{pValue < 0.001 ? "< 0.001" : pValue.toFixed(4)}</strong><span className="text-xs text-indigo-500 ml-1">(df = 1)</span></div>
+          <div className={`mt-2 text-sm font-medium rounded-md px-3 py-1.5 ${pValue < 0.05 ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
+            {pValue < 0.05 ? "Significant association between test result and disease status (p < 0.05)" : "No significant association detected (p \u2265 0.05)"}
+          </div>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p className="text-sm text-amber-800"><strong>Key insight:</strong> The <span className="text-slate-500 font-semibold">dashed gray box</span> shows where the box would sit if the test were no better than chance. The chi-square statistic measures the squared distance between observed and expected.</p>
+        </div>
+        <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3"><strong>Try it:</strong> Drag the box toward the origin to see &chi;&sup2; shrink toward zero. Load the &quot;Worthless Test&quot; preset to see &chi;&sup2; &asymp; 0.</div>
+        {!showExpected && (<><hr className="border-slate-100" /><InputPanel values={values} setValue={setValue} setValues={setValues} /></>)}
+      </div>
+    </LessonLayout>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LESSON 8 — Sandbox
+   ══════════════════════════════════════════════════════════════ */
+
+function OverlayToggle({ label, active, color, onClick }) {
+  return (
+    <button onClick={onClick}
+      className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${active ? "text-white border-transparent" : "text-slate-500 border-slate-200 bg-white hover:bg-slate-50"}`}
+      style={active ? { backgroundColor: color, borderColor: color } : {}}>
+      {label}
+    </button>
+  );
+}
+
+function SandboxStatRow({ label, value, color }) {
+  return (
+    <div className="flex items-center justify-between py-1 px-2 rounded-md hover:bg-slate-50">
+      <div className="flex items-center gap-2"><span className="w-1.5 h-3.5 rounded-full" style={{ backgroundColor: color }} /><span className="text-xs font-medium text-slate-700">{label}</span></div>
+      <span className="text-xs font-semibold text-slate-800 tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+function Lesson8_Sandbox({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome }) {
+  const [activeOverlays, setActiveOverlays] = useState([]);
+  const [showDiagonals, setShowDiagonals] = useState(false);
+  const toggleOverlay = (ov) => setActiveOverlays((prev) => prev.includes(ov) ? prev.filter((o) => o !== ov) : [...prev, ov]);
+  const expected = useMemo(() => computeExpectedValues(values), [values]);
+  const chi2 = useMemo(() => computeChiSquare(values, expected), [values, expected]);
+  const pValue = useMemo(() => chiSquarePValue(chi2), [chi2]);
+  return (
+    <LessonLayout meta={{ number: 8, title: "Sandbox", subtitle: "Explore the truth diagram freely" }}
+      totalLessons={totalLessons} onPrev={onPrev} onNext={onNext} onHome={onHome}
+      diagram={<TruthDiagram values={values} onDrag={setValues} overlays={activeOverlays}
+        renderExtraSvg={showDiagonals ? (layout) => <DiagonalOverlays values={values} centerX={layout.centerX} centerY={layout.centerY} scale={layout.scale} /> : undefined} />}>
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Overlays</h3>
+          <div className="flex flex-wrap gap-2">
+            <OverlayToggle label="Sensitivity" active={activeOverlays.includes("sensitivity")} color={CELL_COLORS.tp} onClick={() => toggleOverlay("sensitivity")} />
+            <OverlayToggle label="Specificity" active={activeOverlays.includes("specificity")} color={CELL_COLORS.tn} onClick={() => toggleOverlay("specificity")} />
+            <OverlayToggle label="PPV" active={activeOverlays.includes("ppv")} color={CELL_COLORS.tp} onClick={() => toggleOverlay("ppv")} />
+            <OverlayToggle label="NPV" active={activeOverlays.includes("npv")} color={CELL_COLORS.tn} onClick={() => toggleOverlay("npv")} />
+            <OverlayToggle label="Odds / LR" active={showDiagonals} color="#64748b" onClick={() => setShowDiagonals(!showDiagonals)} />
+          </div>
+        </div>
+        <hr className="border-slate-100" />
+        <InputPanel values={values} setValue={setValue} setValues={setValues} />
+        <hr className="border-slate-100" />
+        <div>
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">All Statistics</h3>
+          <div className="space-y-1">
+            <SandboxStatRow label="Sensitivity" value={formatStat(stats.sensitivity)} color={CELL_COLORS.tp} />
+            <SandboxStatRow label="Specificity" value={formatStat(stats.specificity)} color={CELL_COLORS.tn} />
+            <SandboxStatRow label="PPV" value={formatStat(stats.ppv)} color={CELL_COLORS.tp} />
+            <SandboxStatRow label="NPV" value={formatStat(stats.npv)} color={CELL_COLORS.tn} />
+            <SandboxStatRow label="Accuracy" value={formatStat(stats.accuracy)} color="#64748b" />
+            <SandboxStatRow label="Prevalence" value={formatStat(stats.prevalence)} color="#94a3b8" />
+          </div>
+        </div>
+        <div>
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Advanced</h3>
+          <div className="space-y-1">
+            <SandboxStatRow label="+LR" value={formatRatio(stats.positiveLR)} color="#ea580c" />
+            <SandboxStatRow label={"\u2212LR"} value={formatRatio(stats.negativeLR)} color="#0d9488" />
+            <SandboxStatRow label="Odds Ratio" value={formatRatio(stats.oddsRatio)} color="#64748b" />
+            <SandboxStatRow label="Pretest Odds" value={formatRatio(stats.pretestOdds)} color="#64748b" />
+            <SandboxStatRow label={"\u03C7\u00B2"} value={formatRatio(chi2)} color="#4f46e5" />
+            <SandboxStatRow label="p-value" value={pValue < 0.001 ? "< 0.001" : pValue.toFixed(4)} color={pValue < 0.05 ? "#16a34a" : "#ca8a04"} />
+          </div>
+        </div>
+        <div className="pt-1 text-xs text-slate-400">Total subjects: {stats.total}</div>
+      </div>
+    </LessonLayout>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   APP
+   ══════════════════════════════════════════════════════════════ */
+
+const TOTAL_LESSONS = 8;
+
+function Header() {
+  return (
+    <header className="bg-white border-b border-slate-200 px-6 py-3">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-xl font-bold text-slate-800">Truth Diagram</h1>
+        <p className="text-xs text-slate-500">Interactive 2&times;2 diagnostic testing visualization</p>
+      </div>
+    </header>
+  );
+}
+
+function AppShell({ children }) {
+  return (<div className="min-h-screen bg-slate-50 flex flex-col"><Header /><div className="flex-1 flex flex-col">{children}</div></div>);
+}
+
+function App() {
+  const { values, stats, setValues, setValue } = useDiagramState();
+  const [currentLesson, setCurrentLesson] = useState(0);
+  const goHome = () => setCurrentLesson(0);
+  const goPrev = () => setCurrentLesson((n) => Math.max(1, n - 1));
+  const goNext = () => setCurrentLesson((n) => Math.min(TOTAL_LESSONS, n + 1));
+  const navProps = { totalLessons: TOTAL_LESSONS, onPrev: goPrev, onNext: goNext, onHome: goHome };
+  const dataProps = { values, stats, setValue, setValues };
+
+  if (currentLesson === 1) return <AppShell><Lesson1_Table key="l1" {...navProps} {...dataProps} /></AppShell>;
+  if (currentLesson === 2) return <AppShell><Lesson2_BoxAxes key="l2" {...navProps} {...dataProps} /></AppShell>;
+  if (currentLesson === 3) return <AppShell><Lesson3_SensSpec key="l3" {...navProps} {...dataProps} /></AppShell>;
+  if (currentLesson === 4) return <AppShell><Lesson4_PredValues key="l4" {...navProps} {...dataProps} /></AppShell>;
+  if (currentLesson === 5) return <AppShell><Lesson5_Trajectory key="l5" {...navProps} values={values} stats={stats} setValues={setValues} /></AppShell>;
+  if (currentLesson === 6) return <AppShell><Lesson6_LikelihoodRatios key="l6" {...navProps} {...dataProps} /></AppShell>;
+  if (currentLesson === 7) return <AppShell><Lesson7_ChiSquare key="l7" {...navProps} {...dataProps} /></AppShell>;
+  if (currentLesson === 8) return <AppShell><Lesson8_Sandbox key="l8" {...navProps} {...dataProps} /></AppShell>;
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <Header />
+      <main className="max-w-7xl mx-auto px-6 py-6">
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Lessons</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { n: 1, title: "The 2\u00d72 Table", icon: "\ud83d\udcca" },
+              { n: 2, title: "Box & Axes", icon: "\u2795" },
+              { n: 3, title: "Sensitivity & Specificity", icon: "\ud83c\udfaf" },
+              { n: 4, title: "Predictive Values", icon: "\ud83d\udd2e" },
+              { n: 5, title: "Trajectory & ROC", icon: "\ud83d\udcc8" },
+              { n: 6, title: "Likelihood Ratios & Bayes", icon: "\u2696\ufe0f" },
+              { n: 7, title: "Chi-Square Test", icon: "\ud83d\udcd0" },
+              { n: 8, title: "Sandbox", icon: "\ud83e\uddea" },
+            ].map((lesson) => (
+              <button key={lesson.n} onClick={() => setCurrentLesson(lesson.n)}
+                className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all text-left">
+                <span className="text-2xl">{lesson.icon}</span>
+                <div><span className="text-xs text-indigo-500 font-semibold">Lesson {lesson.n}</span><p className="text-sm font-medium text-slate-700">{lesson.title}</p></div>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex-1 min-w-0"><div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4"><TruthDiagram values={values} onDrag={setValues} /></div></div>
+          <div className="w-full lg:w-80 shrink-0 space-y-4">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4"><InputPanel values={values} setValue={setValue} setValues={setValues} /></div>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4"><StatsPanel stats={stats} /></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
