@@ -108,23 +108,32 @@ function ChiSquareContribLines({
         const p1 = toSvg(obsX, obsY, centerX, centerY, scale);
         const p2 = toSvg(expX, expY, centerX, centerY, scale);
         const contrib = exp > 0 ? (obs - exp) ** 2 / exp : 0;
+        // Thick dotted line along axis between observed & expected (per Fig. 6)
         return (
           <g key={key}>
             <line
               x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
               stroke={colors[key]}
-              strokeWidth={4}
-              opacity={0.7}
-              strokeLinecap="round"
+              strokeWidth={8}
+              opacity={0.6}
+              strokeLinecap="butt"
+              strokeDasharray="3 3"
+            />
+            {/* Thin solid overlay for clarity */}
+            <line
+              x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+              stroke={colors[key]}
+              strokeWidth={1.5}
+              opacity={0.9}
             />
             <text
-              x={(p1.x + p2.x) / 2 + (dir[0] === 0 ? 10 : 0)}
-              y={(p1.y + p2.y) / 2 + (dir[1] === 0 ? -8 : 0)}
-              fontSize={9}
-              fontWeight={600}
+              x={(p1.x + p2.x) / 2 + (dir[0] === 0 ? 14 : 0)}
+              y={(p1.y + p2.y) / 2 + (dir[1] === 0 ? -10 : 0)}
+              fontSize={10}
+              fontWeight={700}
               fill={colors[key]}
             >
-              {contrib.toFixed(1)}
+              {contrib.toFixed(2)}
             </text>
           </g>
         );

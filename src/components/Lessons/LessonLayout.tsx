@@ -16,15 +16,10 @@ interface LessonLayoutProps {
   onHome: () => void;
   onGoTo: (lesson: number) => void;
   lessonTitles: string[];
-  /** Left side: the diagram area */
   diagram: ReactNode;
-  /** Optional key insight box rendered at the top of the right panel */
   keyInsight?: ReactNode;
-  /** Optional content rendered above the diagram on the left side */
   diagramHeader?: ReactNode;
-  /** Right side: educational content */
   children: ReactNode;
-  /** Current cell values for export */
   values?: CellValues;
 }
 
@@ -44,11 +39,11 @@ export function LessonLayout({
 }: LessonLayoutProps) {
   return (
     <div className="flex flex-col h-full">
-      {/* Header: Home + dropdown nav + export */}
-      <div className="px-4 py-2 bg-indigo-600 flex items-center gap-3">
+      {/* Header: Home + dropdown nav + export — light background */}
+      <div className="px-4 py-2 bg-white border-b border-slate-200 flex items-center gap-3">
         <button
           onClick={onHome}
-          className="px-2.5 py-1 text-sm font-medium text-indigo-100 hover:text-white hover:bg-indigo-500 rounded-md transition-colors shrink-0"
+          className="px-2.5 py-1 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors shrink-0"
         >
           &larr; Home
         </button>
@@ -60,8 +55,8 @@ export function LessonLayout({
             if (val === -1) onHome();
             else onGoTo(val);
           }}
-          className="px-3 py-1.5 text-sm font-bold bg-indigo-500 text-white border border-indigo-400 rounded-md
-            focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer min-w-[220px]"
+          className="px-3 py-1.5 text-sm font-bold bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-md
+            focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer min-w-[220px]"
         >
           <option value={-1}>Introduction</option>
           {lessonTitles.map((title, i) => (
@@ -76,17 +71,14 @@ export function LessonLayout({
         </div>
       </div>
 
-      {/* Main content: diagram + text side-by-side */}
+      {/* Main content */}
       <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6 overflow-auto">
-        {/* Left: Diagram (~60%) */}
         <div className="flex-1 min-w-0 lg:w-3/5">
           {diagramHeader && <div className="mb-3">{diagramHeader}</div>}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
             {diagram}
           </div>
         </div>
-
-        {/* Right: Educational content (~40%) */}
         <div className="w-full lg:w-2/5 shrink-0">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4 h-full overflow-auto">
             {keyInsight}

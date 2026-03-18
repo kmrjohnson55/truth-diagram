@@ -136,7 +136,7 @@ export function Lesson5_Trajectory({
 
   // Full trajectory for the curve
   const trajectory = useMemo(
-    () => generateTrajectory(dPrime, 120),
+    () => generateTrajectory(dPrime, 300),
     [dPrime]
   );
 
@@ -180,29 +180,40 @@ export function Lesson5_Trajectory({
           values={sliderValues}
           onDrag={setValues}
           overlays={["sensitivity", "specificity"]}
+          extraMargin={25}
           renderExtraSvg={(layout) => {
             const { centerX: cx, centerY: cy, scale: s } = layout;
-            // Draw trajectory curve (path of upper-left corner)
+            // Trajectory curve (path of upper-left corner) — smooth with 300 points
             const pathD = trajectoryDiagramPoints
               .map((p, i) => {
                 const svgPt = toSvg(p.diagramX, p.diagramY, cx, cy, s);
                 return `${i === 0 ? "M" : "L"}${svgPt.x.toFixed(1)},${svgPt.y.toFixed(1)}`;
               })
               .join(" ");
-            // Chance line: slope=1 through origin in the UL quadrant
+            // Chance trajectory: slope=1 diagonal in UL quadrant
             const chanceStart = toSvg(0, 0, cx, cy, s);
-            const maxLen = Math.max(diseased, healthy);
+            const maxLen = Math.max(diseased, healthy) * 1.2;
             const chanceEnd = toSvg(-maxLen, maxLen, cx, cy, s);
+            // Operating point (current UL corner position)
+            const opPt = toSvg(-sliderValues.fp, sliderValues.tp, cx, cy, s);
             return (
               <g>
-                {/* Chance line (worthless test) */}
+                {/* Chance trajectory (dashed red) */}
                 <line
                   x1={chanceStart.x} y1={chanceStart.y}
                   x2={chanceEnd.x} y2={chanceEnd.y}
-                  stroke="#ef4444" strokeWidth={1.5} strokeDasharray="6 4" opacity={0.4}
+                  stroke="#ef4444" strokeWidth={1.5} strokeDasharray="8 5" opacity={0.5}
                 />
-                {/* Test trajectory */}
-                <path d={pathD} fill="none" stroke="#eab308" strokeWidth={2.5} opacity={0.8} />
+                <text
+                  x={chanceEnd.x + 4} y={chanceEnd.y + 14}
+                  fontSize={9} fill="#ef4444" fontWeight={500} opacity={0.7}
+                >
+                  Chance trajectory
+                </text>
+                {/* Test trajectory (yellow) */}
+                <path d={pathD} fill="none" stroke="#eab308" strokeWidth={3} opacity={0.85} />
+                {/* Operating point */}
+                <circle cx={opPt.x} cy={opPt.y} r={5} fill="#1e293b" stroke="white" strokeWidth={1.5} />
               </g>
             );
           }}
@@ -215,9 +226,14 @@ export function Lesson5_Trajectory({
             The Threshold Tradeoff
           </h3>
           <p className="text-sm text-slate-600 leading-relaxed">
-            Most diagnostic tests have an adjustable threshold (cutoff value).
-            Moving the threshold changes the balance between sensitivity and
-            specificity &mdash; you can&rsquo;t improve both at once.
+            The test trajectory (<span className="font-semibold" style={{color:"#eab308"}}>yellow curve</span>)
+            shows the path along which the upper-left corner of the box moves
+            as the threshold changes. The box slides along this curve; its shape
+            stays the same but its position changes. The{" "}
+            <span className="font-semibold text-red-600">dashed red line</span> is the
+            chance trajectory &mdash; the path a worthless test would follow,
+            where the post-test probability equals the pre-test probability.
+            The <strong>black dot</strong> marks the current operating point.
           </p>
         </div>
 

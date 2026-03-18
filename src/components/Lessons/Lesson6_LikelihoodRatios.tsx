@@ -120,38 +120,38 @@ export function Lesson6_LikelihoodRatios({
             Three Diagonals &mdash; Three Odds
           </h3>
 
-          {/* Pretest odds */}
-          <div className="bg-slate-50 rounded-lg p-3 space-y-1 mb-2">
+          {/* Pretest odds (brown dashed) */}
+          <div className="rounded-lg p-3 space-y-1 mb-2" style={{ backgroundColor: "#fef3c7" }}>
             <div className="flex items-center gap-2">
-              <span className="w-6 h-0.5" style={{ backgroundImage: "repeating-linear-gradient(90deg, #64748b 0 6px, transparent 6px 10px)" }} />
-              <span className="text-xs font-semibold text-slate-600 uppercase">Pretest odds</span>
+              <span className="w-6 h-0.5" style={{ backgroundImage: "repeating-linear-gradient(90deg, #92400e 0 6px, transparent 6px 10px)" }} />
+              <span className="text-xs font-semibold uppercase" style={{ color: "#92400e" }}>Pretest odds (box diagonal)</span>
             </div>
-            <div className="text-sm font-mono text-slate-700">
+            <div className="text-sm font-mono" style={{ color: "#78350f" }}>
               Diseased / Healthy = {diseased} / {healthy} = <strong>{formatRatio(pretestOdds)}</strong>
             </div>
           </div>
 
-          {/* Positive odds */}
-          <div className="bg-orange-50 rounded-lg p-3 space-y-1 mb-2">
+          {/* Positive odds (green) */}
+          <div className="bg-green-50 rounded-lg p-3 space-y-1 mb-2">
             <div className="flex items-center gap-2">
-              <span className="w-6 h-0.5 rounded" style={{ backgroundColor: "#ea580c" }} />
-              <span className="text-xs font-semibold text-orange-700 uppercase">Positive odds</span>
+              <span className="w-6 h-0.5 rounded" style={{ backgroundColor: "#16a34a" }} />
+              <span className="text-xs font-semibold text-green-700 uppercase">Odds after positive test</span>
             </div>
-            <p className="text-sm text-orange-600">Steeper is better</p>
-            <div className="text-sm font-mono text-orange-800">
+            <p className="text-sm text-green-600">Steeper is better</p>
+            <div className="text-sm font-mono text-green-800">
               <span style={{ color: CELL_COLORS.tp }}>TP</span> / <span style={{ color: CELL_COLORS.fp }}>FP</span>
               {" = "}{tp} / {fp} = <strong>{formatRatio(posttestOddsPos)}</strong>
             </div>
           </div>
 
-          {/* Negative odds */}
-          <div className="bg-teal-50 rounded-lg p-3 space-y-1">
+          {/* Negative odds (red) */}
+          <div className="bg-red-50 rounded-lg p-3 space-y-1">
             <div className="flex items-center gap-2">
-              <span className="w-6 h-0.5 rounded" style={{ backgroundColor: "#0d9488" }} />
-              <span className="text-xs font-semibold text-teal-700 uppercase">Negative odds</span>
+              <span className="w-6 h-0.5 rounded" style={{ backgroundColor: "#dc2626" }} />
+              <span className="text-xs font-semibold text-red-700 uppercase">Odds after negative test</span>
             </div>
-            <p className="text-sm text-teal-600">Flatter is better</p>
-            <div className="text-sm font-mono text-teal-800">
+            <p className="text-sm text-red-600">Flatter is better</p>
+            <div className="text-sm font-mono text-red-800">
               <span style={{ color: CELL_COLORS.fn }}>FN</span> / <span style={{ color: CELL_COLORS.tn }}>TN</span>
               {" = "}{fn} / {tn} = <strong>{formatRatio(posttestOddsNeg)}</strong>
             </div>
@@ -167,17 +167,17 @@ export function Lesson6_LikelihoodRatios({
             Thus the likelihood ratio is simply the factor by which the pretest slope (odds) is increased (+LR) or decreased (&minus;LR) by the test.
           </p>
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
-              <div className="text-xs text-orange-600 font-semibold uppercase">+LR</div>
-              <div className="text-xs font-mono text-orange-700 mt-1">odds after + test / pretest odds</div>
-              <div className="text-lg font-bold text-orange-700">{formatRatio(posLR)}</div>
-              <div className="text-xs text-orange-600 mt-1">Higher is better (&gt;10 = strong)</div>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+              <div className="text-xs text-green-600 font-semibold uppercase">+LR</div>
+              <div className="text-xs font-mono text-green-700 mt-1">odds after + test / pretest odds</div>
+              <div className="text-lg font-bold text-green-700">{formatRatio(posLR)}</div>
+              <div className="text-xs text-green-600 mt-1">Higher is better (&gt;10 = strong)</div>
             </div>
-            <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 text-center">
-              <div className="text-xs text-teal-600 font-semibold uppercase">&minus;LR</div>
-              <div className="text-xs font-mono text-teal-700 mt-1">odds after &minus; test / pretest odds</div>
-              <div className="text-lg font-bold text-teal-700">{formatRatio(negLR)}</div>
-              <div className="text-xs text-teal-600 mt-1">Lower is better (&lt;0.1 = strong)</div>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+              <div className="text-xs text-red-600 font-semibold uppercase">&minus;LR</div>
+              <div className="text-xs font-mono text-red-700 mt-1">odds after &minus; test / pretest odds</div>
+              <div className="text-lg font-bold text-red-700">{formatRatio(negLR)}</div>
+              <div className="text-xs text-red-600 mt-1">Lower is better (&lt;0.1 = strong)</div>
             </div>
           </div>
         </div>

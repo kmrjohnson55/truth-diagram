@@ -185,7 +185,42 @@ function App() {
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 min-w-0">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-              <TruthDiagram values={values} onDrag={setValues} />
+              <TruthDiagram
+                values={values}
+                onDrag={setValues}
+                renderExtraSvg={(layout) => {
+                  const { centerX: cx, centerY: cy, scale: s } = layout;
+                  const { tp: t, fp: f, fn: n, tn: r } = values;
+                  // Box corners in SVG coords
+                  const ulY = cy - t * s;
+                  const llY = cy + n * s;
+                  const ulX = cx - f * s;
+                  const urX = cx + r * s;
+                  const bracketColor = "#b45309"; // burnt orange
+                  const bracketOffset = 18;
+                  const bracketWidth = 6;
+                  // Vertical curly bracket (right side) — "Diseased"
+                  const vx = urX + bracketOffset;
+                  const vmid = (ulY + llY) / 2;
+                  const vPath = `M${vx - bracketWidth},${ulY} Q${vx},${ulY} ${vx},${ulY + 8} L${vx},${vmid - 6} Q${vx},${vmid} ${vx + bracketWidth},${vmid} Q${vx},${vmid} ${vx},${vmid + 6} L${vx},${llY - 8} Q${vx},${llY} ${vx - bracketWidth},${llY}`;
+                  // Horizontal curly bracket (below) — "Healthy"
+                  const hy = llY + bracketOffset;
+                  const hmid = (ulX + urX) / 2;
+                  const hPath = `M${ulX},${hy - bracketWidth} Q${ulX},${hy} ${ulX + 8},${hy} L${hmid - 6},${hy} Q${hmid},${hy} ${hmid},${hy + bracketWidth} Q${hmid},${hy} ${hmid + 6},${hy} L${urX - 8},${hy} Q${urX},${hy} ${urX},${hy - bracketWidth}`;
+                  return (
+                    <g>
+                      <path d={vPath} fill="none" stroke={bracketColor} strokeWidth={1.5} />
+                      <text x={vx + bracketWidth + 4} y={vmid + 4} fontSize={11} fontWeight={600} fill={bracketColor}>
+                        Diseased
+                      </text>
+                      <path d={hPath} fill="none" stroke={bracketColor} strokeWidth={1.5} />
+                      <text x={hmid} y={hy + bracketWidth + 14} textAnchor="middle" fontSize={11} fontWeight={600} fill={bracketColor}>
+                        Healthy
+                      </text>
+                    </g>
+                  );
+                }}
+              />
             </div>
           </div>
           <div className="w-full lg:w-80 shrink-0 space-y-4">
