@@ -14,9 +14,7 @@ interface Lesson3Props extends LessonNavProps {
 }
 
 export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles }: Lesson3Props) {
-  const { tp, fp, fn, tn } = values;
-  const diseased = tp + fn;
-  const healthy = fp + tn;
+  const { tp: _tp, fp: _fp, fn: _fn, tn: _tn } = values;
 
   const [activeView, setActiveView] = useState<"sensitivity" | "specificity">("sensitivity");
   const [showLowPrev, setShowLowPrev] = useState(false);
