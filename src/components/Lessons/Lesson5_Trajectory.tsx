@@ -29,12 +29,10 @@ function RocCurve({
   trajectory,
   currentSens,
   currentFpr,
-  auc,
 }: {
   trajectory: { sensitivity: number; specificity: number }[];
   currentSens: number;
   currentFpr: number;
-  auc: number;
 }) {
   const s = ROC_SIZE - ROC_PAD * 2;
   const tx = (fpr: number) => ROC_PAD + fpr * s;
