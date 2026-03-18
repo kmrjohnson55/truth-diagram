@@ -200,7 +200,7 @@ export function Lesson7_ChiSquare({
             <strong>On the diagram:</strong> The{" "}
             <span className="text-slate-600 font-semibold">dashed gray box</span>{" "}
             shows where the box would sit under the null hypothesis of
-            independence (no association), in other words, if the test had no effect on the likelihood of disease. The displacement between the
+            independence (no association), in other words, if the test had no effect on the likelihood of disease. The net displacement between the
             solid and dashed boxes corresponds to the &chi;&sup2; value.
           </p>
         </div>
@@ -313,9 +313,16 @@ export function Lesson7_ChiSquare({
               ? "Significant association between test result and disease status (p < 0.05)"
               : "No significant association detected (p \u2265 0.05)"}
           </div>
+          {/* Significance thresholds */}
+          <div className="text-xs text-indigo-700 mt-2 space-y-0.5">
+            <div className="font-semibold">For a 2&times;2 table with 1 degree of freedom:</div>
+            <div>&bull; <span style={{ fontFamily: "Georgia, serif" }}>&chi;</span>&sup2; &ge; 3.84 &rarr; p &lt; 0.05 (significant at 5%)</div>
+            <div>&bull; <span style={{ fontFamily: "Georgia, serif" }}>&chi;</span>&sup2; &ge; 6.63 &rarr; p &lt; 0.01 (significant at 1%)</div>
+            <div>&bull; <span style={{ fontFamily: "Georgia, serif" }}>&chi;</span>&sup2; &ge; 10.83 &rarr; p &lt; 0.001 (highly significant)</div>
+          </div>
         </div>
 
-        {/* Expected values table (moved below chi-square box) */}
+        {/* Expected values table */}
         <div>
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
             Expected Values (Under H&#8320;)

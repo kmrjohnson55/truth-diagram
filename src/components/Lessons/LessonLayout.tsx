@@ -29,7 +29,7 @@ const SHORT_TITLES = [
   "Box & Axes",
   "Sens / Spec",
   "PPV / NPV",
-  "Trajectory",
+  "ROC Curves",
   "LR & Bayes",
   "Chi-Square",
   "Sandbox",

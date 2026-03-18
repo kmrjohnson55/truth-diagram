@@ -18,7 +18,7 @@ const LESSON_TITLES = [
   "The Box and Axes",
   "Sensitivity & Specificity",
   "Predictive Values",
-  "Trajectory & ROC",
+  "ROC Curves",
   "Likelihood Ratios & Bayes",
   "Chi-Square Test",
   "Sandbox",
@@ -96,7 +96,7 @@ function App() {
       </AppShell>
     );
   }
-  // Lesson 4: Trajectory & ROC (formerly Lesson 5)
+  // Lesson 4: ROC Curves (formerly Lesson 5)
   if (currentLesson === 4) {
     return (
       <AppShell>
@@ -158,7 +158,7 @@ function App() {
               { n: 1, title: "Box & Axes", icon: "\u2795" },
               { n: 2, title: "Sensitivity & Specificity", icon: "\uD83C\uDFAF" },
               { n: 3, title: "Predictive Values", icon: "\uD83D\uDD2E" },
-              { n: 4, title: "Trajectory & ROC", icon: "\uD83D\uDCC8" },
+              { n: 4, title: "ROC Curves", icon: "\uD83D\uDCC8" },
               { n: 5, title: "Likelihood Ratios & Bayes", icon: "\u2696\uFE0F" },
               { n: 6, title: "Chi-Square Test", icon: "\uD83D\uDCD0" },
               { n: 7, title: "Sandbox", icon: "\uD83E\uDDEA" },

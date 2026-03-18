@@ -131,7 +131,7 @@ export function Lesson5_Trajectory({
     <LessonLayout
       meta={{
         number: 4,
-        title: "Test Trajectory & ROC",
+        title: "ROC Curves",
         subtitle: "How the threshold tradeoff shapes the diagram",
       }}
       totalLessons={totalLessons}
@@ -146,6 +146,7 @@ export function Lesson5_Trajectory({
             <strong>Key insight:</strong> The truth diagram and ROC curve contain
             similar information, but the diagram preserves{" "}
             <em>prevalence</em> (the box shape), which the ROC curve discards.
+            This means it ignores predictive values, among other limitations.
           </p>
         </div>
       }

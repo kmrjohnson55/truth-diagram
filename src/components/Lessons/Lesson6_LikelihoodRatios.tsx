@@ -141,27 +141,27 @@ export function Lesson6_LikelihoodRatios({
           </h3>
           <p className="text-sm text-slate-600 leading-relaxed mb-3">
             The likelihood ratio is the factor by which the odds before the test
-            is increased (positive LR) or decreased (negative LR) by the test.
+            are increased (positive LR) or decreased (negative LR) by the test.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-              <div className="text-xs text-green-600 font-semibold uppercase">Positive LR</div>
+              <div className="text-xs text-green-600 font-semibold uppercase">Positive LR =</div>
               <div className="text-xs font-mono text-green-700 mt-1">
                 odds after positive test
                 <hr className="border-green-300 my-0.5" />
                 odds before the test
               </div>
-              <div className="text-lg font-bold text-green-700 mt-1">{formatRatio(posLR)}</div>
+              <div className="text-lg font-bold text-green-700 mt-1">= {formatRatio(posLR)}</div>
               <div className="text-xs text-green-600 mt-1">Higher is better (&gt;10 = strong)</div>
             </div>
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-              <div className="text-xs text-red-600 font-semibold uppercase">Negative LR</div>
+              <div className="text-xs text-red-600 font-semibold uppercase">Negative LR =</div>
               <div className="text-xs font-mono text-red-700 mt-1">
                 odds after negative test
                 <hr className="border-red-300 my-0.5" />
                 odds before the test
               </div>
-              <div className="text-lg font-bold text-red-700 mt-1">{formatRatio(negLR)}</div>
+              <div className="text-lg font-bold text-red-700 mt-1">= {formatRatio(negLR)}</div>
               <div className="text-xs text-red-600 mt-1">Lower is better (&lt;0.1 = strong)</div>
             </div>
           </div>

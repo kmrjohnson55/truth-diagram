@@ -74,15 +74,16 @@ export function TwoByTwoTable({ values, setValue, setValues }: TwoByTwoTableProp
       {/* Presets + Default */}
       <div className="flex gap-2">
         <select
+          value=""
           onChange={(e) => {
-            const preset = presets[parseInt(e.target.value)];
+            const idx = parseInt(e.target.value);
+            const preset = presets[idx];
             if (preset) setValues(preset.values);
           }}
-          defaultValue=""
           className="flex-1 px-2 py-1 text-xs border border-slate-200 rounded-md
             focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white text-slate-800"
         >
-          <option value="" disabled>Load a preset...</option>
+          <option value="">Load a preset...</option>
           <optgroup label="General Examples">
             {generalPresets.map((p) => (
               <option key={p.name} value={presets.indexOf(p)}>{p.name}</option>

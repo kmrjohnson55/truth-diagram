@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { DiagonalOverlays } from "../Diagram/DiagonalOverlays";
+import { toSvg } from "../../utils/geometry";
 import { TwoByTwoTable } from "../UI/TwoByTwoTable";
 import {
   formatStat,
@@ -74,7 +75,7 @@ export function Lesson8_Sandbox({
   // Overlay toggle state
   const [activeOverlays, setActiveOverlays] = useState<OverlayType[]>([]);
   const [showDiagonals, setShowDiagonals] = useState(false);
-  const [_showTable] = useState(false);
+  const [showChiSquare, setShowChiSquare] = useState(false);
 
   const toggleOverlay = (ov: OverlayType) => {
     setActiveOverlays((prev) =>
@@ -107,18 +108,30 @@ export function Lesson8_Sandbox({
           values={values}
           onDrag={setValues}
           overlays={activeOverlays}
-          renderExtraSvg={
-            showDiagonals
-              ? (layout) => (
-                  <DiagonalOverlays
-                    values={values}
-                    centerX={layout.centerX}
-                    centerY={layout.centerY}
-                    scale={layout.scale}
-                  />
-                )
-              : undefined
-          }
+          renderExtraSvg={(showDiagonals || showChiSquare) ? (layout) => {
+            const { centerX: cx, centerY: cy, scale: s } = layout;
+            return (
+              <g>
+                {showDiagonals && (
+                  <DiagonalOverlays values={values} centerX={cx} centerY={cy} scale={s} />
+                )}
+                {showChiSquare && (() => {
+                  const e = expected;
+                  const ul = toSvg(-e.fp, e.tp, cx, cy, s);
+                  const ur = toSvg(e.tn, e.tp, cx, cy, s);
+                  const ll = toSvg(-e.fp, -e.fn, cx, cy, s);
+                  const lr = toSvg(e.tn, -e.fn, cx, cy, s);
+                  const pathD = `M${ul.x},${ul.y} L${ur.x},${ur.y} L${lr.x},${lr.y} L${ll.x},${ll.y} Z`;
+                  return (
+                    <g>
+                      <path d={pathD} fill="none" stroke="#94a3b8" strokeWidth={2} strokeDasharray="8 4" opacity={0.6} />
+                      <text x={ll.x - 4} y={lr.y + 14} fontSize={10} fill="#94a3b8" fontWeight={500}>Expected</text>
+                    </g>
+                  );
+                })()}
+              </g>
+            );
+          } : undefined}
         />
       }
     >
@@ -158,6 +171,12 @@ export function Lesson8_Sandbox({
               active={showDiagonals}
               color="#64748b"
               onClick={() => setShowDiagonals(!showDiagonals)}
+            />
+            <OverlayToggle
+              label="Chi-Square"
+              active={showChiSquare}
+              color="#4f46e5"
+              onClick={() => setShowChiSquare(!showChiSquare)}
             />
           </div>
         </div>
