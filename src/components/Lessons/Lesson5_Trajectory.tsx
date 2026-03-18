@@ -183,22 +183,29 @@ export function Lesson5_Trajectory({
           extraMargin={25}
           renderExtraSvg={(layout) => {
             const { centerX: cx, centerY: cy, scale: s } = layout;
-            // Trajectory curve (path of upper-left corner) — smooth with 300 points
-            const pathD = trajectoryDiagramPoints
-              .map((p, i) => {
-                const svgPt = toSvg(p.diagramX, p.diagramY, cx, cy, s);
-                return `${i === 0 ? "M" : "L"}${svgPt.x.toFixed(1)},${svgPt.y.toFixed(1)}`;
-              })
-              .join(" ");
-            // Chance trajectory: slope=1 diagonal in UL quadrant
+            // Convert trajectory points to SVG coordinates
+            const svgPts = trajectoryDiagramPoints.map((p) =>
+              toSvg(p.diagramX, p.diagramY, cx, cy, s)
+            );
+            // Smooth trajectory using SVG quadratic bezier through every other point
+            let pathD = `M${svgPts[0].x.toFixed(1)},${svgPts[0].y.toFixed(1)}`;
+            for (let i = 1; i < svgPts.length - 1; i += 2) {
+              const cp = svgPts[i];
+              const end = svgPts[Math.min(i + 1, svgPts.length - 1)];
+              pathD += ` Q${cp.x.toFixed(1)},${cp.y.toFixed(1)} ${end.x.toFixed(1)},${end.y.toFixed(1)}`;
+            }
+            // Chance trajectory: parallel to box diagonal (slope = diseased/healthy)
+            // In diagram coords, goes through origin with slope = diseased/healthy
+            // i.e., for every 1 unit left (-x), go diseased/healthy units up (+y)
+            const ratio = healthy > 0 ? diseased / healthy : 1;
+            const ext = Math.max(diseased, healthy) * 1.3;
             const chanceStart = toSvg(0, 0, cx, cy, s);
-            const maxLen = Math.max(diseased, healthy) * 1.2;
-            const chanceEnd = toSvg(-maxLen, maxLen, cx, cy, s);
-            // Operating point (current UL corner position)
+            const chanceEnd = toSvg(-ext, ext * ratio, cx, cy, s);
+            // Operating point
             const opPt = toSvg(-sliderValues.fp, sliderValues.tp, cx, cy, s);
             return (
               <g>
-                {/* Chance trajectory (dashed red) */}
+                {/* Chance trajectory (dashed red) — parallel to box diagonal */}
                 <line
                   x1={chanceStart.x} y1={chanceStart.y}
                   x2={chanceEnd.x} y2={chanceEnd.y}
@@ -210,7 +217,7 @@ export function Lesson5_Trajectory({
                 >
                   Chance trajectory
                 </text>
-                {/* Test trajectory (yellow) */}
+                {/* Test trajectory (yellow, smoothed) */}
                 <path d={pathD} fill="none" stroke="#eab308" strokeWidth={3} opacity={0.85} />
                 {/* Operating point */}
                 <circle cx={opPt.x} cy={opPt.y} r={5} fill="#1e293b" stroke="white" strokeWidth={1.5} />

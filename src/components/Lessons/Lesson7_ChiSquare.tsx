@@ -98,6 +98,8 @@ function ChiSquareContribLines({
     { key: "tn", obs: values.tn, exp: expected.tn, dir: [1, 0] },
   ];
 
+  const origin = toSvg(0, 0, centerX, centerY, scale);
+
   return (
     <g>
       {entries.map(({ key, obs, exp, dir }) => {
@@ -105,36 +107,29 @@ function ChiSquareContribLines({
         const obsY = dir[1] * obs;
         const expX = dir[0] * exp;
         const expY = dir[1] * exp;
-        const p1 = toSvg(obsX, obsY, centerX, centerY, scale);
-        const p2 = toSvg(expX, expY, centerX, centerY, scale);
-        const contrib = exp > 0 ? (obs - exp) ** 2 / exp : 0;
-        // Thick dotted line along axis between observed & expected (per Fig. 6)
+        const pObs = toSvg(obsX, obsY, centerX, centerY, scale);
+        const pExp = toSvg(expX, expY, centerX, centerY, scale);
+        // Per Fig. 6: solid colored line from origin to observed,
+        // dashed colored line from observed to expected
         return (
           <g key={key}>
+            {/* Solid: origin → observed boundary */}
             <line
-              x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+              x1={origin.x} y1={origin.y} x2={pObs.x} y2={pObs.y}
               stroke={colors[key]}
-              strokeWidth={8}
-              opacity={0.6}
+              strokeWidth={6}
+              opacity={0.7}
               strokeLinecap="butt"
-              strokeDasharray="3 3"
             />
-            {/* Thin solid overlay for clarity */}
+            {/* Dashed: observed → expected boundary */}
             <line
-              x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+              x1={pObs.x} y1={pObs.y} x2={pExp.x} y2={pExp.y}
               stroke={colors[key]}
-              strokeWidth={1.5}
-              opacity={0.9}
+              strokeWidth={6}
+              opacity={0.5}
+              strokeLinecap="butt"
+              strokeDasharray="4 3"
             />
-            <text
-              x={(p1.x + p2.x) / 2 + (dir[0] === 0 ? 14 : 0)}
-              y={(p1.y + p2.y) / 2 + (dir[1] === 0 ? -10 : 0)}
-              fontSize={10}
-              fontWeight={700}
-              fill={colors[key]}
-            >
-              {contrib.toFixed(2)}
-            </text>
           </g>
         );
       })}
@@ -229,11 +224,33 @@ export function Lesson7_ChiSquare({
             </>
           )}
           belowDiagramText={
-            <>
-              <strong>Try it:</strong> Drag the box toward the origin &mdash; the
-              solid and dashed boxes converge and &chi;&sup2; shrinks toward zero.
-              Load &quot;Worthless Test&quot; for perfect overlap.
-            </>
+            <div className="space-y-2">
+              <div className="text-center">
+                <span style={{ fontFamily: "Georgia, serif" }}>&chi;</span>&sup2; ={" "}
+                <span className="inline-flex items-center gap-1">
+                  &Sigma;
+                  <span className="inline-flex flex-col items-center text-xs leading-tight">
+                    <span>(observed &minus; expected)&sup2;</span>
+                    <span className="border-t border-slate-400">expected</span>
+                  </span>
+                </span>
+                {" = "}
+                &Sigma;{" "}
+                <span className="inline-flex flex-col items-center text-xs leading-tight">
+                  <span>
+                    (<span style={{color: CELL_COLORS.tp}}>&#9608;</span>{" "}
+                    <span style={{color: CELL_COLORS.fp}}>&#9608;</span>{" "}
+                    <span style={{color: CELL_COLORS.fn}}>&#9608;</span>{" "}
+                    <span style={{color: CELL_COLORS.tn}}>&#9608;</span>)&sup2;
+                  </span>
+                  <span className="border-t border-slate-400">expected</span>
+                </span>
+              </div>
+              <div className="text-center text-slate-600">
+                <strong>Try it:</strong> Drag the box toward the origin &mdash; the solid and dashed boxes
+                converge and <span style={{ fontFamily: "Georgia, serif" }}>&chi;</span>&sup2; shrinks toward zero.
+              </div>
+            </div>
           }
         />
       }

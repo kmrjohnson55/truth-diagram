@@ -198,7 +198,7 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
         ref={svgRef}
         viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
         className="w-full"
-        style={{ cursor: getCursor(), maxHeight: "70vh" }}
+        style={{ cursor: getCursor(), maxHeight: "70vh", overflow: "visible" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleHoverForCursor}
         onMouseLeave={() => setHoverCorner(null)}
