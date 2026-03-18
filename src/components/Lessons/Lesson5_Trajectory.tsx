@@ -11,7 +11,6 @@ import {
   computeAUC,
 } from "../../utils/trajectory";
 import { toSvg } from "../../utils/geometry";
-import { presets, generalPresets, clinicalPresets } from "../../utils/presets";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
 import type { LessonNavProps } from "./lessonTypes";
 

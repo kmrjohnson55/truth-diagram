@@ -64,12 +64,12 @@ export function Lesson8_Sandbox({
   onGoTo,
   lessonTitles,
 }: Lesson8Props) {
-  const { tp, fp, fn, tn } = values;
-  const diseased = tp + fn;
-  const healthy = fp + tn;
-  const testPos = tp + fp;
-  const testNeg = fn + tn;
-  const total = tp + fp + fn + tn;
+  const { tp: _tp2, fp: _fp2, fn: _fn2, tn: _tn2 } = values;
+  
+  
+  
+  
+  
 
   // Overlay toggle state
   const [activeOverlays, setActiveOverlays] = useState<OverlayType[]>([]);
