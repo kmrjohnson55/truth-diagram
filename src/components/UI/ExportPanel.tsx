@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { exportSVG, exportPNG, generateShareableLink } from "../../utils/export";
+import { exportSVG, exportFullScreenPNG, exportViaPrint, generateShareableLink } from "../../utils/export";
 import type { CellValues } from "../../utils/statistics";
 
 interface ExportPanelProps {
@@ -12,7 +12,6 @@ export function ExportButton({ values, lesson }: ExportPanelProps) {
   const [copied, setCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -24,24 +23,19 @@ export function ExportButton({ values, lesson }: ExportPanelProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const findSvg = (): SVGSVGElement | null => {
-    return document.querySelector("svg[viewBox]");
+  const handlePNG = async () => {
+    await exportFullScreenPNG(`truth-diagram-lesson${lesson || 0}.png`);
+    setOpen(false);
   };
 
   const handleSVG = () => {
-    const svg = findSvg();
-    if (svg) {
-      exportSVG(svg, `truth-diagram-lesson${lesson || 0}.svg`);
-      setOpen(false);
-    }
+    exportSVG(`truth-diagram-lesson${lesson || 0}.svg`);
+    setOpen(false);
   };
 
-  const handlePNG = async () => {
-    const svg = findSvg();
-    if (svg) {
-      await exportPNG(svg, `truth-diagram-lesson${lesson || 0}.png`, 3);
-      setOpen(false);
-    }
+  const handlePrint = () => {
+    exportViaPrint();
+    setOpen(false);
   };
 
   const handleLink = () => {
@@ -63,22 +57,30 @@ export function ExportButton({ values, lesson }: ExportPanelProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
+        <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
+          <button
+            onClick={handlePrint}
+            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <span className="font-medium">Print / Save as PDF (Recommended)</span>
+            <br />
+            <span className="text-xs text-slate-600">Full screen with all text, best for publications</span>
+          </button>
           <button
             onClick={handlePNG}
             className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <span className="font-medium">Export as PNG</span>
             <br />
-            <span className="text-xs text-slate-600">High-resolution (3x) for publications &amp; slides</span>
+            <span className="text-xs text-slate-600">Full screen capture for slides</span>
           </button>
           <button
             onClick={handleSVG}
             className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
           >
-            <span className="font-medium">Export as SVG</span>
+            <span className="font-medium">Export diagram as SVG</span>
             <br />
-            <span className="text-xs text-slate-600">Scalable vector for editing &amp; printing</span>
+            <span className="text-xs text-slate-600">Scalable vector of diagram only</span>
           </button>
           <hr className="my-1 border-slate-100" />
           <button

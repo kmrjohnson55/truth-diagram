@@ -117,6 +117,28 @@ export function Lesson0_Introduction({
           </p>
         </div>
 
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
+            References
+          </h3>
+          <ol className="space-y-2 text-xs text-slate-600 list-decimal list-inside leading-relaxed">
+            <li>
+              Johnson KM. The two by two diagram: a graphical truth table.
+              <em> J Clin Epidemiol</em> 1999;52:1073&ndash;1082.
+            </li>
+            <li>
+              Johnson KM, Johnson BK. Visual presentation of statistical
+              concepts in diagnostic testing: the 2&times;2 diagram.
+              <em> AJR Am J Roentgenol</em> 2014;203:W14&ndash;W20.
+            </li>
+            <li>
+              Johnson KM. Using Bayes&rsquo; rule in diagnostic testing: a
+              graphical explanation.
+              <em> Diagnosis</em> 2017;4(3):159&ndash;167.
+            </li>
+          </ol>
+        </div>
+
         <button
           onClick={() => onGoTo(1)}
           className="w-full px-4 py-2.5 text-sm font-semibold text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors"
