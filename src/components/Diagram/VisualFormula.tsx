@@ -86,7 +86,7 @@ export function VisualFormula({ values, activeOverlays }: VisualFormulaProps) {
             className="flex items-center gap-1 text-sm text-slate-600 flex-wrap justify-center"
           >
             <span className="font-medium text-slate-700">{def.name}</span>
-            <span className="text-slate-400 mx-1">=</span>
+            <span className="text-slate-600 mx-1">=</span>
 
             {/* Visual fraction with colored bars */}
             <Fraction
@@ -94,13 +94,13 @@ export function VisualFormula({ values, activeOverlays }: VisualFormulaProps) {
               denominator={
                 <span className="flex items-center gap-1">
                   <ColorBar color={trueColor} />
-                  <span className="text-xs text-slate-400">+</span>
+                  <span className="text-xs text-slate-600">+</span>
                   <ColorBar color={falseColor} />
                 </span>
               }
             />
 
-            <span className="text-slate-400 mx-1">=</span>
+            <span className="text-slate-600 mx-1">=</span>
 
             {/* Numeric fraction */}
             <Fraction
@@ -112,13 +112,13 @@ export function VisualFormula({ values, activeOverlays }: VisualFormulaProps) {
               denominator={
                 <span className="text-sm tabular-nums">
                   <span style={{ color: trueColor }}>{trueVal}</span>
-                  <span className="text-slate-400"> + </span>
+                  <span className="text-slate-600"> + </span>
                   <span style={{ color: falseColor }}>{falseVal}</span>
                 </span>
               }
             />
 
-            <span className="text-slate-400 mx-1">=</span>
+            <span className="text-slate-600 mx-1">=</span>
 
             {/* Percentage result */}
             <span className="font-bold text-slate-800 text-base">

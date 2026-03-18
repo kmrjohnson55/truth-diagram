@@ -2,6 +2,7 @@ import { useState } from "react";
 import { TruthDiagram } from "./components/Diagram/TruthDiagram";
 import { InputPanel } from "./components/UI/InputPanel";
 import { StatsPanel } from "./components/UI/StatsPanel";
+import { Lesson0_Introduction } from "./components/Lessons/Lesson0_Introduction";
 import { Lesson2_BoxAxes } from "./components/Lessons/Lesson2_BoxAxes";
 import { Lesson3_SensSpec } from "./components/Lessons/Lesson3_SensSpec";
 import { Lesson4_PredValues } from "./components/Lessons/Lesson4_PredValues";
@@ -28,7 +29,7 @@ function Header() {
     <header className="bg-white border-b border-slate-200 px-6 py-3">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-xl font-bold text-slate-800">Truth Diagram</h1>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-600">
           Interactive 2&times;2 diagnostic testing visualization
         </p>
       </div>
@@ -63,8 +64,15 @@ function App() {
   };
   const dataProps = { values, stats, setValue, setValues };
 
-  // Each lesson is a proper React component with its own hook lifecycle
-  // Lesson 1: Box & Axes (formerly Lesson 2)
+  // Introduction
+  if (currentLesson === -1) {
+    return (
+      <AppShell>
+        <Lesson0_Introduction key="intro" {...navProps} values={values} stats={stats} setValues={setValues} />
+      </AppShell>
+    );
+  }
+  // Lesson 1: Box & Axes
   if (currentLesson === 1) {
     return (
       <AppShell>
@@ -126,9 +134,23 @@ function App() {
     <div className="min-h-screen bg-slate-50">
       <Header />
       <main className="max-w-7xl mx-auto px-6 py-6">
+        {/* Introduction button */}
+        <div className="mb-4">
+          <button
+            onClick={() => setCurrentLesson(-1)}
+            className="w-full flex items-center gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 hover:shadow-md transition-all text-left"
+          >
+            <span className="text-2xl">{"\uD83D\uDCD6"}</span>
+            <div>
+              <span className="text-sm text-indigo-600 font-bold">Introduction</span>
+              <p className="text-sm text-slate-600">What is the truth diagram and how to use these lessons</p>
+            </div>
+          </button>
+        </div>
+
         {/* Lessons navigation cards */}
         <div className="mb-6">
-          <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+          <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-3">
             Lessons
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -148,7 +170,7 @@ function App() {
               >
                 <span className="text-2xl">{lesson.icon}</span>
                 <div>
-                  <span className="text-xs text-indigo-500 font-semibold">
+                  <span className="text-xs text-indigo-600 font-semibold">
                     Lesson {lesson.n}
                   </span>
                   <p className="text-sm font-medium text-slate-700">

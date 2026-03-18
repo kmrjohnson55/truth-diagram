@@ -41,7 +41,7 @@ function OverlayToggle({
       className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${
         active
           ? "text-white border-transparent"
-          : "text-slate-500 border-slate-200 bg-white hover:bg-slate-50"
+          : "text-slate-600 border-slate-200 bg-white hover:bg-slate-50"
       }`}
       style={active ? { backgroundColor: color, borderColor: color } : {}}
     >
@@ -123,7 +123,7 @@ export function Lesson8_Sandbox({
       <div className="space-y-4">
         {/* Overlay toggles */}
         <div>
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
             Overlays
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -179,7 +179,7 @@ export function Lesson8_Sandbox({
                       <th className="p-2"></th>
                       <th className="p-2 text-center font-semibold text-slate-600 border-b-2 border-slate-200">Disease +</th>
                       <th className="p-2 text-center font-semibold text-slate-600 border-b-2 border-slate-200">Disease &minus;</th>
-                      <th className="p-2 text-center font-semibold text-slate-400 border-b-2 border-slate-100">Total</th>
+                      <th className="p-2 text-center font-semibold text-slate-600 border-b-2 border-slate-100">Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -191,7 +191,7 @@ export function Lesson8_Sandbox({
                       <td className="p-2 text-center">
                         <span className="inline-block px-3 py-1 rounded-md bg-yellow-50 text-yellow-700 font-bold border border-yellow-200">FP = {fp}</span>
                       </td>
-                      <td className="p-2 text-center text-slate-400 font-medium">{testPos}</td>
+                      <td className="p-2 text-center text-slate-600 font-medium">{testPos}</td>
                     </tr>
                     <tr>
                       <td className="p-2 font-semibold text-slate-600 border-r-2 border-slate-200">Test &minus;</td>
@@ -201,13 +201,13 @@ export function Lesson8_Sandbox({
                       <td className="p-2 text-center">
                         <span className="inline-block px-3 py-1 rounded-md bg-blue-50 text-blue-700 font-bold border border-blue-200">TN = {tn}</span>
                       </td>
-                      <td className="p-2 text-center text-slate-400 font-medium">{testNeg}</td>
+                      <td className="p-2 text-center text-slate-600 font-medium">{testNeg}</td>
                     </tr>
                     <tr className="border-t-2 border-slate-200">
-                      <td className="p-2 font-semibold text-slate-400">Total</td>
-                      <td className="p-2 text-center text-slate-400 font-medium">{diseased}</td>
-                      <td className="p-2 text-center text-slate-400 font-medium">{healthy}</td>
-                      <td className="p-2 text-center text-slate-500 font-bold">{total}</td>
+                      <td className="p-2 font-semibold text-slate-600">Total</td>
+                      <td className="p-2 text-center text-slate-600 font-medium">{diseased}</td>
+                      <td className="p-2 text-center text-slate-600 font-medium">{healthy}</td>
+                      <td className="p-2 text-center text-slate-600 font-bold">{total}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -242,7 +242,7 @@ export function Lesson8_Sandbox({
 
         {/* All statistics */}
         <div>
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
             All Statistics
           </h3>
           <div className="space-y-1">
@@ -256,7 +256,7 @@ export function Lesson8_Sandbox({
         </div>
 
         <div>
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
             Advanced
           </h3>
           <div className="space-y-1">
@@ -277,7 +277,7 @@ export function Lesson8_Sandbox({
           </div>
         </div>
 
-        <div className="pt-1 text-xs text-slate-400">
+        <div className="pt-1 text-xs text-slate-600">
           Total subjects: {stats.total}
         </div>
       </div>

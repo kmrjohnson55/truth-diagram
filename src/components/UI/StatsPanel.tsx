@@ -76,7 +76,7 @@ export function StatsPanel({ stats }: StatsPanelProps) {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+      <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
         Statistics
       </h3>
 
@@ -95,7 +95,7 @@ export function StatsPanel({ stats }: StatsPanelProps) {
                 <span className="text-sm font-medium text-slate-700">
                   {row.label}
                 </span>
-                <span className="text-xs text-slate-400 ml-1.5">
+                <span className="text-xs text-slate-600 ml-1.5">
                   {row.description}
                 </span>
               </div>
@@ -109,7 +109,7 @@ export function StatsPanel({ stats }: StatsPanelProps) {
 
       <hr className="border-slate-100" />
 
-      <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+      <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
         Advanced
       </h3>
 
@@ -128,7 +128,7 @@ export function StatsPanel({ stats }: StatsPanelProps) {
                 <span className="text-sm font-medium text-slate-700">
                   {row.label}
                 </span>
-                <span className="text-xs text-slate-400 ml-1.5">
+                <span className="text-xs text-slate-600 ml-1.5">
                   {row.description}
                 </span>
               </div>
@@ -140,7 +140,7 @@ export function StatsPanel({ stats }: StatsPanelProps) {
         ))}
       </div>
 
-      <div className="pt-2 text-xs text-slate-400">
+      <div className="pt-2 text-xs text-slate-600">
         Total subjects: {stats.total}
       </div>
     </div>

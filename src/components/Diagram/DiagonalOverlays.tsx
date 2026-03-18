@@ -58,7 +58,7 @@ export function DiagonalOverlays({
         fontSize={10} fontWeight={600} fill="#64748b"
         opacity={0.85}
       >
-        slope = {fmtSlope(pretestSlope)}
+        pretest odds = {fmtSlope(pretestSlope)}
       </text>
 
       {/* UL quadrant diagonal: origin → upper-left corner (posttest odds+) */}
@@ -69,14 +69,13 @@ export function DiagonalOverlays({
             stroke="#ea580c" strokeWidth={2.5}
             opacity={0.85}
           />
-          {/* Posttest odds (+) label — steeper is better */}
           <text
             x={midUL.x - 8} y={midUL.y - 8}
             fontSize={10} fontWeight={600} fill="#ea580c"
             textAnchor="end"
             opacity={0.9}
           >
-            slope = {fmtSlope(postPosSlope)}
+            positive odds = {fmtSlope(postPosSlope)}
           </text>
         </>
       )}
@@ -89,13 +88,12 @@ export function DiagonalOverlays({
             stroke="#0d9488" strokeWidth={2.5}
             opacity={0.85}
           />
-          {/* Posttest odds (−) label — flatter is better */}
           <text
             x={midLR.x + 8} y={midLR.y + 14}
             fontSize={10} fontWeight={600} fill="#0d9488"
             opacity={0.9}
           >
-            slope = {fmtSlope(postNegSlope)}
+            negative odds = {fmtSlope(postNegSlope)}
           </text>
         </>
       )}

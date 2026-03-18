@@ -155,7 +155,7 @@ export function Lesson5_Trajectory({
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
-      diagramHeader={
+      keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
             <strong>Key insight:</strong> The truth diagram and ROC curve contain
@@ -189,12 +189,12 @@ export function Lesson5_Trajectory({
           <div className="bg-green-50 rounded-lg p-3 text-center">
             <div className="text-xs text-green-600 font-semibold uppercase">Sensitivity</div>
             <div className="text-lg font-bold text-green-700">{formatStat(sliderStats.sensitivity)}</div>
-            <div className="text-xs text-green-500">TP={sliderValues.tp} FN={sliderValues.fn}</div>
+            <div className="text-xs text-green-600">TP={sliderValues.tp} FN={sliderValues.fn}</div>
           </div>
           <div className="bg-blue-50 rounded-lg p-3 text-center">
             <div className="text-xs text-blue-600 font-semibold uppercase">Specificity</div>
             <div className="text-lg font-bold text-blue-700">{formatStat(sliderStats.specificity)}</div>
-            <div className="text-xs text-blue-500">TN={sliderValues.tn} FP={sliderValues.fp}</div>
+            <div className="text-xs text-blue-600">TN={sliderValues.tn} FP={sliderValues.fp}</div>
           </div>
         </div>
 
@@ -209,10 +209,10 @@ export function Lesson5_Trajectory({
             currentFpr={1 - sliderStats.specificity}
             auc={auc}
           />
-          <p className="text-xs text-slate-500 mt-2">
+          <p className="text-xs text-slate-600 mt-2">
             The <strong className="text-indigo-600">blue curve</strong> shows all
             possible sensitivity/specificity pairs for this test. The{" "}
-            <span className="text-red-400">dashed red line</span> is a worthless
+            <span className="text-red-500">dashed red line</span> is a worthless
             test (coin flip). The <strong className="text-indigo-600">dot</strong>{" "}
             marks the current threshold position. The shaded area under the
             curve (AUC) measures overall test performance: 0.5 = chance, 1.0 = perfect.
@@ -221,7 +221,7 @@ export function Lesson5_Trajectory({
 
         {/* Slider — below the ROC diagram */}
         <div className="bg-slate-50 rounded-lg p-3">
-          <label className="text-xs font-semibold text-slate-500 uppercase block mb-2">
+          <label className="text-xs font-semibold text-slate-600 uppercase block mb-2">
             Threshold Slider
           </label>
           <input
@@ -233,11 +233,11 @@ export function Lesson5_Trajectory({
             onChange={(e) => setThreshold(Number(e.target.value))}
             className="w-full accent-indigo-500"
           />
-          <div className="flex justify-between text-xs text-slate-400 mt-1">
+          <div className="flex justify-between text-xs text-slate-600 mt-1">
             <span>&larr; More sensitive</span>
             <span>More specific &rarr;</span>
           </div>
-          <p className="text-xs text-slate-400 mt-2">
+          <p className="text-xs text-slate-600 mt-2">
             Drag the slider to move the operating point along the ROC curve.
             The truth diagram and live stats update in real time.
           </p>
@@ -246,12 +246,12 @@ export function Lesson5_Trajectory({
         {/* d-prime explanation */}
         <div className="bg-slate-50 rounded-lg p-3">
           <div className="flex items-baseline justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">
+            <span className="text-xs font-semibold text-slate-600 uppercase">
               d&prime; (d-prime)
             </span>
             <span className="text-lg font-bold text-indigo-600">{dPrime.toFixed(2)}</span>
           </div>
-          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+          <p className="text-xs text-slate-600 mt-1 leading-relaxed">
             d&prime; is the <em>discriminability index</em> from signal detection
             theory: d&prime; = &Phi;&sup1;(sensitivity) + &Phi;&sup1;(specificity),
             where &Phi;&sup1; is the inverse normal CDF. It captures the
@@ -263,7 +263,7 @@ export function Lesson5_Trajectory({
 
         {/* Preset selector */}
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1.5">
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">
             Presets
           </label>
           <select
@@ -296,7 +296,7 @@ export function Lesson5_Trajectory({
           </select>
         </div>
 
-        <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3">
+        <div className="text-xs text-slate-600 bg-slate-50 rounded-lg p-3">
           <strong>Try it:</strong> Move the slider left to increase sensitivity
           (catch more disease) at the cost of specificity (more false alarms).
           Watch the box shape stay the same while its position on the axes changes.

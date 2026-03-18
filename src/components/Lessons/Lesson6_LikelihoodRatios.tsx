@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { DiagonalOverlays } from "../Diagram/DiagonalOverlays";
@@ -14,7 +15,7 @@ interface Lesson6Props extends LessonNavProps {
   setValues: (v: CellValues) => void;
 }
 
-/* ─── Main lesson component ─── */
+type ViewMode = "odds" | "likelihood" | "bayes";
 
 export function Lesson6_LikelihoodRatios({
   values,
@@ -32,18 +33,12 @@ export function Lesson6_LikelihoodRatios({
   const diseased = tp + fn;
   const healthy = fp + tn;
 
-  // Pretest odds = prevalence / (1 - prevalence) = diseased / healthy
+  const [viewMode, setViewMode] = useState<ViewMode>("odds");
+
   const pretestOdds = healthy > 0 ? diseased / healthy : Infinity;
-
-  // Posttest odds positive = TP / FP
   const posttestOddsPos = fp > 0 ? tp / fp : Infinity;
-
-  // Posttest odds negative = FN / TN
   const posttestOddsNeg = tn > 0 ? fn / tn : 0;
-
-  // +LR = sens / (1 - spec)
   const posLR = stats.positiveLR;
-  // -LR = (1 - sens) / spec
   const negLR = stats.negativeLR;
 
   return (
@@ -60,31 +55,12 @@ export function Lesson6_LikelihoodRatios({
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       keyInsight={
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
-          <h3 className="text-sm font-bold text-amber-800 uppercase tracking-wide">
-            Bayes&rsquo; Rule (Odds Form)
-          </h3>
-          <p className="text-sm text-amber-800 leading-relaxed">
-            Posttest odds = Pretest odds &times; LR
-          </p>
-          <div className="space-y-1 text-sm font-mono text-amber-900">
-            <div>
-              <strong>+ test:</strong>{" "}
-              {formatRatio(pretestOdds)} &times; {formatRatio(posLR)} ={" "}
-              <strong>{formatRatio(pretestOdds * posLR)}</strong>
-              {" "}
-              <span className="text-xs text-amber-600">(actual: {formatRatio(posttestOddsPos)})</span>
-            </div>
-            <div>
-              <strong>&minus; test:</strong>{" "}
-              {formatRatio(pretestOdds)} &times; {formatRatio(negLR)} ={" "}
-              <strong>{formatRatio(pretestOdds * negLR)}</strong>
-              {" "}
-              <span className="text-xs text-amber-600">(actual: {formatRatio(posttestOddsNeg)})</span>
-            </div>
-          </div>
-          <p className="text-xs text-amber-700 mt-1">
-            Small rounding differences arise because the cells are integers.
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p className="text-sm text-amber-800">
+            <strong>Key insight:</strong> The truth diagram encodes odds as
+            the <strong>slope</strong> of diagonal lines. Likelihood ratios
+            connect pretest odds to posttest odds via Bayes&rsquo; rule:
+            Posttest odds = Pretest odds &times; LR.
           </p>
         </div>
       }
@@ -101,138 +77,143 @@ export function Lesson6_LikelihoodRatios({
               scale={layout.scale}
             />
           )}
+          belowDiagramText={
+            <>
+              <strong>+LR</strong> = positive odds / pretest odds
+              = {formatRatio(posttestOddsPos)} / {formatRatio(pretestOdds)}
+              = <strong>{formatRatio(posLR)}</strong>
+              <br />
+              <strong>&minus;LR</strong> = negative odds / pretest odds
+              = {formatRatio(posttestOddsNeg)} / {formatRatio(pretestOdds)}
+              = <strong>{formatRatio(negLR)}</strong>
+            </>
+          }
         />
       }
     >
       <div className="space-y-5">
-        {/* 1) What you see: three diagonals whose SLOPES are odds */}
-        <div>
+        {/* Three-way toggle */}
+        <div className="flex gap-1.5">
+          {([
+            { key: "odds" as ViewMode, label: "Odds Ratios" },
+            { key: "likelihood" as ViewMode, label: "Likelihood Ratios" },
+            { key: "bayes" as ViewMode, label: "Bayes\u2019 Theorem" },
+          ]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setViewMode(key)}
+              className={`flex-1 px-2 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                viewMode === key
+                  ? "bg-indigo-500 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Section 1: Odds Ratios ── */}
+        <div className={viewMode !== "odds" && viewMode !== "bayes" ? "opacity-30 transition-opacity" : "transition-opacity"}>
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
             Three Diagonals &mdash; Three Odds
           </h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            The truth diagram encodes odds as the{" "}
-            <strong>slope</strong> of diagonal lines. Each diagonal&rsquo;s
-            rise/run ratio gives you an odds value directly:
-          </p>
-        </div>
 
-        {/* Pretest odds (gray dashed) */}
-        <div className="bg-slate-50 rounded-lg p-3 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-0.5 bg-slate-400" style={{ backgroundImage: "repeating-linear-gradient(90deg, #64748b 0 6px, transparent 6px 10px)" }} />
-            <span className="text-xs font-semibold text-slate-600 uppercase">
-              Dashed gray &mdash; Pretest odds
-            </span>
+          {/* Pretest odds */}
+          <div className="bg-slate-50 rounded-lg p-3 space-y-1 mb-2">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-0.5" style={{ backgroundImage: "repeating-linear-gradient(90deg, #64748b 0 6px, transparent 6px 10px)" }} />
+              <span className="text-xs font-semibold text-slate-600 uppercase">Pretest odds</span>
+            </div>
+            <div className="text-sm font-mono text-slate-700">
+              Diseased / Healthy = {diseased} / {healthy} = <strong>{formatRatio(pretestOdds)}</strong>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Connects upper-left to lower-right corner of the box.
-          </p>
-          <div className="text-sm font-mono text-slate-700">
-            <strong>Slope</strong> = height / width = Diseased / Healthy
-            = {diseased} / {healthy}
-            = <strong>{formatRatio(pretestOdds)}</strong>
-          </div>
-          <div className="text-xs text-slate-500">
-            (Prevalence = {formatStat(stats.prevalence)})
-          </div>
-        </div>
 
-        {/* Posttest odds positive (orange) */}
-        <div className="bg-orange-50 rounded-lg p-3 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-0.5 rounded" style={{ backgroundColor: "#ea580c" }} />
-            <span className="text-xs font-semibold text-orange-700 uppercase">
-              Orange &mdash; Posttest odds (+)
-            </span>
+          {/* Positive odds */}
+          <div className="bg-orange-50 rounded-lg p-3 space-y-1 mb-2">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-0.5 rounded" style={{ backgroundColor: "#ea580c" }} />
+              <span className="text-xs font-semibold text-orange-700 uppercase">Positive odds</span>
+            </div>
+            <p className="text-sm text-orange-600">Steeper is better</p>
+            <div className="text-sm font-mono text-orange-800">
+              <span style={{ color: CELL_COLORS.tp }}>TP</span> / <span style={{ color: CELL_COLORS.fp }}>FP</span>
+              {" = "}{tp} / {fp} = <strong>{formatRatio(posttestOddsPos)}</strong>
+            </div>
           </div>
-          <p className="text-xs text-orange-600 leading-relaxed">
-            Origin &rarr; upper-left corner. <strong>Steeper is better</strong> &mdash;
-            a steep slope means a positive result strongly favors disease.
-          </p>
-          <div className="text-sm font-mono text-orange-800">
-            <strong>Slope</strong> ={" "}
-            <span style={{ color: CELL_COLORS.tp }}>TP</span>
-            {" / "}
-            <span style={{ color: CELL_COLORS.fp }}>FP</span>
-            {" = "}
-            <span style={{ color: CELL_COLORS.tp }}>{tp}</span>
-            {" / "}
-            <span style={{ color: CELL_COLORS.fp }}>{fp}</span>
-            {" = "}
-            <strong>{formatRatio(posttestOddsPos)}</strong>
+
+          {/* Negative odds */}
+          <div className="bg-teal-50 rounded-lg p-3 space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-0.5 rounded" style={{ backgroundColor: "#0d9488" }} />
+              <span className="text-xs font-semibold text-teal-700 uppercase">Negative odds</span>
+            </div>
+            <p className="text-sm text-teal-600">Flatter is better</p>
+            <div className="text-sm font-mono text-teal-800">
+              <span style={{ color: CELL_COLORS.fn }}>FN</span> / <span style={{ color: CELL_COLORS.tn }}>TN</span>
+              {" = "}{fn} / {tn} = <strong>{formatRatio(posttestOddsNeg)}</strong>
+            </div>
           </div>
         </div>
 
-        {/* Posttest odds negative (teal) */}
-        <div className="bg-teal-50 rounded-lg p-3 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-0.5 rounded" style={{ backgroundColor: "#0d9488" }} />
-            <span className="text-xs font-semibold text-teal-700 uppercase">
-              Teal &mdash; Posttest odds (&minus;)
-            </span>
-          </div>
-          <p className="text-xs text-teal-600 leading-relaxed">
-            Origin &rarr; lower-right corner. <strong>Flatter is better</strong> &mdash;
-            a shallow slope means a negative result strongly argues against disease.
-          </p>
-          <div className="text-sm font-mono text-teal-800">
-            <strong>Slope</strong> ={" "}
-            <span style={{ color: CELL_COLORS.fn }}>FN</span>
-            {" / "}
-            <span style={{ color: CELL_COLORS.tn }}>TN</span>
-            {" = "}
-            <span style={{ color: CELL_COLORS.fn }}>{fn}</span>
-            {" / "}
-            <span style={{ color: CELL_COLORS.tn }}>{tn}</span>
-            {" = "}
-            <strong>{formatRatio(posttestOddsNeg)}</strong>
-          </div>
-        </div>
-
-        {/* 2) Derived: Likelihood Ratios connect the slopes */}
-        <div>
+        {/* ── Section 2: Likelihood Ratios ── */}
+        <div className={viewMode !== "likelihood" && viewMode !== "bayes" ? "opacity-30 transition-opacity" : "transition-opacity"}>
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
             Likelihood Ratios
           </h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            The likelihood ratio is the <em>ratio</em> of a posttest slope to
-            the pretest slope. It tells you how much the test result changes
-            the odds, independent of prevalence.
+          <p className="text-sm text-slate-600 leading-relaxed mb-3">
+            Each LR is the ratio of a posttest odds to the pretest odds &mdash;
+            it measures how much the test result shifts the odds, independent of prevalence.
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
               <div className="text-xs text-orange-600 font-semibold uppercase">+LR</div>
-              <div className="text-xs font-mono text-orange-700 mt-1">
-                Sens / (1&minus;Spec)
-              </div>
-              <div className="text-lg font-bold text-orange-700">
-                {formatRatio(posLR)}
-              </div>
-              <div className="text-xs text-orange-500 mt-1">
-                Higher is better (&gt;10 = strong)
-              </div>
+              <div className="text-xs font-mono text-orange-700 mt-1">Sens / (1&minus;Spec)</div>
+              <div className="text-lg font-bold text-orange-700">{formatRatio(posLR)}</div>
+              <div className="text-xs text-orange-600 mt-1">Higher is better (&gt;10 = strong)</div>
             </div>
             <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 text-center">
               <div className="text-xs text-teal-600 font-semibold uppercase">&minus;LR</div>
-              <div className="text-xs font-mono text-teal-700 mt-1">
-                (1&minus;Sens) / Spec
+              <div className="text-xs font-mono text-teal-700 mt-1">(1&minus;Sens) / Spec</div>
+              <div className="text-lg font-bold text-teal-700">{formatRatio(negLR)}</div>
+              <div className="text-xs text-teal-600 mt-1">Lower is better (&lt;0.1 = strong)</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Section 3: Bayes' Theorem ── */}
+        <div className={viewMode !== "bayes" ? "opacity-30 transition-opacity" : "transition-opacity"}>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
+            Bayes&rsquo; Theorem (Odds Form)
+          </h3>
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-2">
+            <p className="text-sm font-semibold text-indigo-800">
+              Posttest odds = Pretest odds &times; LR
+            </p>
+            <div className="space-y-1 text-sm font-mono text-indigo-900">
+              <div>
+                <strong>+ test:</strong>{" "}
+                {formatRatio(pretestOdds)} &times; {formatRatio(posLR)} ={" "}
+                <strong>{formatRatio(pretestOdds * posLR)}</strong>
+                <span className="text-xs text-indigo-600 ml-1">(actual: {formatRatio(posttestOddsPos)})</span>
               </div>
-              <div className="text-lg font-bold text-teal-700">
-                {formatRatio(negLR)}
-              </div>
-              <div className="text-xs text-teal-500 mt-1">
-                Lower is better (&lt;0.1 = strong)
+              <div>
+                <strong>&minus; test:</strong>{" "}
+                {formatRatio(pretestOdds)} &times; {formatRatio(negLR)} ={" "}
+                <strong>{formatRatio(pretestOdds * negLR)}</strong>
+                <span className="text-xs text-indigo-600 ml-1">(actual: {formatRatio(posttestOddsNeg)})</span>
               </div>
             </div>
+            <p className="text-xs text-indigo-600">
+              Small rounding differences arise because the cells are integers.
+            </p>
           </div>
         </div>
 
         {/* Preset selector */}
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1.5">
-            Presets
-          </label>
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">Presets</label>
           <select
             onChange={(e) => {
               const preset = presets[parseInt(e.target.value)];
@@ -243,35 +224,18 @@ export function Lesson6_LikelihoodRatios({
               focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent
               bg-white text-slate-800"
           >
-            <option value="" disabled>
-              Load a preset...
-            </option>
+            <option value="" disabled>Load a preset...</option>
             <optgroup label="General Examples">
               {generalPresets.map((p) => (
-                <option key={p.name} value={presets.indexOf(p)}>
-                  {p.name}
-                </option>
+                <option key={p.name} value={presets.indexOf(p)}>{p.name}</option>
               ))}
             </optgroup>
             <optgroup label="Clinical Examples">
               {clinicalPresets.map((p) => (
-                <option key={p.name} value={presets.indexOf(p)}>
-                  {p.name}
-                </option>
+                <option key={p.name} value={presets.indexOf(p)}>{p.name}</option>
               ))}
             </optgroup>
           </select>
-        </div>
-
-        {/* Summary */}
-        <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3">
-          <strong>Try it:</strong> Drag the box upward and rightward toward
-          the ideal quadrant. Watch the{" "}
-          <strong style={{ color: "#ea580c" }}>orange slope</strong> steepen
-          (good +LR) and the{" "}
-          <strong style={{ color: "#0d9488" }}>teal slope</strong> flatten
-          (good &minus;LR). The perfect test has an infinite orange slope
-          and a zero teal slope.
         </div>
       </div>
     </LessonLayout>

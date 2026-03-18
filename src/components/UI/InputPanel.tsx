@@ -18,7 +18,7 @@ const fields: { key: keyof CellValues; label: string; color: string }[] = [
 export function InputPanel({ values, setValue, setValues }: InputPanelProps) {
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+      <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
         Cell Values
       </h3>
 
@@ -45,8 +45,12 @@ export function InputPanel({ values, setValue, setValues }: InputPanelProps) {
         ))}
       </div>
 
+      <div className="text-sm font-medium text-slate-600 pt-2 border-t border-slate-100">
+        Total subjects: {values.tp + values.fp + values.fn + values.tn}
+      </div>
+
       <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1.5">
+        <label className="block text-xs font-medium text-slate-600 mb-1.5">
           Presets
         </label>
         <select

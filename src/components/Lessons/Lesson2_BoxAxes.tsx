@@ -55,11 +55,11 @@ export function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLesso
           </p>
           <div className="mt-3 bg-slate-50 rounded-lg p-3 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-500">Vertical side (diseased):</span>
+              <span className="text-slate-600">Vertical side (diseased):</span>
               <span className="font-semibold text-slate-700">TP + FN = {tp} + {fn} = {diseased}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Horizontal side (healthy):</span>
+              <span className="text-slate-600">Horizontal side (healthy):</span>
               <span className="font-semibold text-slate-700">FP + TN = {fp} + {tn} = {healthy}</span>
             </div>
           </div>
@@ -75,14 +75,14 @@ export function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLesso
               <span className="text-indigo-600">Current prevalence:</span>
               <span className="font-bold text-indigo-700">{formatStat(stats.prevalence)}</span>
             </div>
-            <p className="mt-1 text-xs text-indigo-500">The box is currently {shapeDesc}.</p>
+            <p className="mt-1 text-xs text-indigo-600">The box is currently {shapeDesc}.</p>
           </div>
         </div>
 
         <hr className="border-slate-100" />
         <InputPanel values={values} setValue={setValue} setValues={setValues} />
 
-        <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3">
+        <div className="text-xs text-slate-600 bg-slate-50 rounded-lg p-3">
           <strong>Try it:</strong> Drag the box to move it around and watch how the four quadrant values change. Drag a corner to resize it and see how the box shape (prevalence) changes. The origin always stays inside.
         </div>
       </div>

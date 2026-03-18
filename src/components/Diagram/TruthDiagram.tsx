@@ -13,6 +13,8 @@ interface TruthDiagramProps {
   overlays?: OverlayType[];
   /** Render prop for extra SVG elements (receives current layout params) */
   renderExtraSvg?: (layout: { centerX: number; centerY: number; scale: number }) => React.ReactNode;
+  /** Optional text displayed below the diagram, replacing the default drag hint */
+  belowDiagramText?: React.ReactNode;
 }
 
 const SVG_WIDTH = 560;
@@ -22,14 +24,13 @@ const CORNER_HIT_RADIUS = 12;
 
 type DragMode = "box" | "corner-ul" | "corner-ur" | "corner-ll" | "corner-lr" | null;
 
-export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg }: TruthDiagramProps) {
+export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText }: TruthDiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const dragStart = useRef<{
     x: number; y: number; values: CellValues;
     centerX: number; centerY: number; scale: number;
   } | null>(null);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
   const [hoverCorner, setHoverCorner] = useState<string | null>(null);
 
   const computedLayout = useMemo(
@@ -37,8 +38,6 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg }: 
     [values]
   );
 
-  // During drag, lock the layout (origin + scale) so axes stay fixed
-  // and only the box redraws. On release, layout recalculates to fit.
   const { centerX, centerY, scale } =
     dragMode && dragStart.current
       ? dragStart.current
@@ -82,7 +81,6 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg }: 
       if (!onDrag) return;
       const pt = getSvgPoint(e);
 
-      // Check corners first
       const corner = nearCorner(pt);
       if (corner) {
         setDragMode(corner);
@@ -91,7 +89,6 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg }: 
         return;
       }
 
-      // Then check box interior for box drag
       const ul = corners.ul;
       const lr = corners.lr;
       if (pt.x >= ul.x && pt.x <= lr.x && pt.y >= ul.y && pt.y <= lr.y) {
@@ -108,7 +105,6 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg }: 
       if (!dragMode || !dragStart.current || !onDrag) return;
       const pt = getSvgPoint(e);
       const orig = dragStart.current.values;
-      // Use layout from drag start to avoid feedback loop
       const { centerX: cx, centerY: cy, scale: s } = dragStart.current;
 
       if (dragMode === "box") {
@@ -127,26 +123,25 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg }: 
 
         onDrag({ tp: newTp, fp: newFp, fn: newFn, tn: newTn });
       } else {
-        // Corner drag: convert SVG point to diagram coords using initial layout
         const diagX = (pt.x - cx) / s;
-        const diagY = -(pt.y - cy) / s; // y is flipped
+        const diagY = -(pt.y - cy) / s;
 
         let { tp, fp, fn, tn } = orig;
 
         switch (dragMode) {
-          case "corner-ul": // controls FP (left = -x) and TP (up = +y)
+          case "corner-ul":
             fp = Math.round(Math.max(0, -diagX));
             tp = Math.round(Math.max(0, diagY));
             break;
-          case "corner-ur": // controls TN (right = +x) and TP (up = +y)
+          case "corner-ur":
             tn = Math.round(Math.max(0, diagX));
             tp = Math.round(Math.max(0, diagY));
             break;
-          case "corner-ll": // controls FP (left = -x) and FN (down = -y)
+          case "corner-ll":
             fp = Math.round(Math.max(0, -diagX));
             fn = Math.round(Math.max(0, -diagY));
             break;
-          case "corner-lr": // controls TN (right = +x) and FN (down = -y)
+          case "corner-lr":
             tn = Math.round(Math.max(0, diagX));
             fn = Math.round(Math.max(0, -diagY));
             break;
@@ -174,37 +169,14 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg }: 
     }
   }, [dragMode, handleMouseMove, handleMouseUp]);
 
-  const handleHover = useCallback(
+  // Lightweight hover just for corner cursor changes
+  const handleHoverForCursor = useCallback(
     (e: React.MouseEvent) => {
       if (dragMode) return;
       const pt = getSvgPoint(e);
-
-      // Check corner hover for cursor
-      const corner = nearCorner(pt);
-      setHoverCorner(corner);
-
-      const origin = toSvg(0, 0, centerX, centerY, scale);
-      const ul = corners.ul;
-      const lr = corners.lr;
-
-      if (pt.x < ul.x || pt.x > lr.x || pt.y < ul.y || pt.y > lr.y) {
-        setTooltip(null);
-        return;
-      }
-
-      let text: string;
-      if (pt.x < origin.x && pt.y < origin.y) {
-        text = `True Positives: ${values.tp}`;
-      } else if (pt.x >= origin.x && pt.y < origin.y) {
-        text = `False Positives: ${values.fp}`;
-      } else if (pt.x < origin.x && pt.y >= origin.y) {
-        text = `False Negatives: ${values.fn}`;
-      } else {
-        text = `True Negatives: ${values.tn}`;
-      }
-      setTooltip({ x: pt.x + 12, y: pt.y - 12, text });
+      setHoverCorner(nearCorner(pt));
     },
-    [values, centerX, centerY, scale, getSvgPoint, corners, nearCorner, dragMode]
+    [getSvgPoint, nearCorner, dragMode]
   );
 
   const getCursor = () => {
@@ -226,8 +198,8 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg }: 
         className="w-full"
         style={{ cursor: getCursor(), maxHeight: "70vh" }}
         onMouseDown={handleMouseDown}
-        onMouseMove={handleHover}
-        onMouseLeave={() => { setTooltip(null); setHoverCorner(null); }}
+        onMouseMove={handleHoverForCursor}
+        onMouseLeave={() => setHoverCorner(null)}
       >
         <rect width={SVG_WIDTH} height={SVG_HEIGHT} fill="white" rx={8} />
 
@@ -281,45 +253,20 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg }: 
           </g>
         )}
 
-        {/* Extra SVG (diagonals, ghost boxes) — rendered above axes & box */}
+        {/* Extra SVG (diagonals, ghost boxes) */}
         {renderExtraSvg?.({ centerX, centerY, scale })}
-
-        {/* Tooltip */}
-        {tooltip && (
-          <g>
-            <rect
-              x={tooltip.x}
-              y={tooltip.y - 16}
-              width={tooltip.text.length * 7.5 + 16}
-              height={24}
-              fill="rgba(15, 23, 42, 0.9)"
-              rx={4}
-            />
-            <text
-              x={tooltip.x + 8}
-              y={tooltip.y}
-              fontSize={12}
-              fill="white"
-              dominantBaseline="middle"
-            >
-              {tooltip.text}
-            </text>
-          </g>
-        )}
-
-        {/* Drag hint */}
-        {onDrag && !dragMode && (
-          <text
-            x={SVG_WIDTH / 2}
-            y={SVG_HEIGHT - 8}
-            textAnchor="middle"
-            fontSize={11}
-            fill="#94a3b8"
-          >
-            Drag box to move · Drag corners to resize
-          </text>
-        )}
       </svg>
+
+      {/* Below-diagram text: custom or default hint */}
+      {belowDiagramText ? (
+        <div className="text-xs text-slate-600 text-center mt-2 px-4 leading-relaxed">
+          {belowDiagramText}
+        </div>
+      ) : onDrag && !dragMode ? (
+        <div className="text-xs text-slate-600 text-center mt-1">
+          Drag box to move &middot; Drag corners to resize
+        </div>
+      ) : null}
 
       {/* Visual formula below the diagram */}
       {overlays.length > 0 && (
