@@ -102,7 +102,7 @@ export function Lesson0_Introduction({
             <li><strong>Box &amp; Axes</strong> &mdash; the coordinate system</li>
             <li><strong>Sensitivity &amp; Specificity</strong> &mdash; basic test accuracy</li>
             <li><strong>Predictive Values</strong> &mdash; PPV, NPV, and prevalence effects</li>
-            <li><strong>Trajectory &amp; ROC</strong> &mdash; threshold tradeoffs</li>
+            <li><strong>ROC Curves</strong> &mdash; threshold tradeoffs</li>
             <li><strong>Likelihood Ratios &amp; Bayes</strong> &mdash; odds and slopes</li>
             <li><strong>Chi-Square Test</strong> &mdash; statistical significance</li>
             <li><strong>Sandbox</strong> &mdash; free exploration with all features</li>

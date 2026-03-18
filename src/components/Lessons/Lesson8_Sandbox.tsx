@@ -183,9 +183,6 @@ export function Lesson8_Sandbox({
 
         <hr className="border-slate-100" />
 
-
-        <hr className="border-slate-100" />
-
         {/* All statistics */}
         <div>
           <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
@@ -206,8 +203,8 @@ export function Lesson8_Sandbox({
             Advanced
           </h3>
           <div className="space-y-1">
-            <StatRow label="+LR" value={formatRatio(stats.positiveLR)} color="#ea580c" />
-            <StatRow label="−LR" value={formatRatio(stats.negativeLR)} color="#0d9488" />
+            <StatRow label="Positive LR" value={formatRatio(stats.positiveLR)} color="#16a34a" />
+            <StatRow label="Negative LR" value={formatRatio(stats.negativeLR)} color="#dc2626" />
             <StatRow label="Odds Ratio" value={formatRatio(stats.oddsRatio)} color="#64748b" />
             <StatRow label="Pretest Odds" value={formatRatio(stats.pretestOdds)} color="#64748b" />
             <StatRow
