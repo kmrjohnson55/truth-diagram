@@ -261,7 +261,6 @@ export function Lesson5_Trajectory({
                 trajectory={trajectory}
                 currentSens={sliderStats.sensitivity}
                 currentFpr={1 - sliderStats.specificity}
-                auc={auc}
               />
             </div>
             <div className="space-y-3 text-sm text-slate-600">
