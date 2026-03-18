@@ -244,7 +244,20 @@ export function Lesson7_ChiSquare({
                 <div className="text-xs text-slate-600 text-center">
                   Solid colors are observed values, dotted colors are expected values.
                 </div>
-                {/* Numeric equation */}
+                {/* Visual colored-block equation first */}
+                <div className="text-center text-sm text-slate-800 leading-relaxed">
+                  <span style={{ fontFamily: "Georgia, serif", fontSize: "1.1em" }}>&chi;</span>&sup2; ={" "}
+                  {cellData.map((c, i) => (
+                    <span key={c.key}>
+                      {i > 0 && " + "}
+                      <span className="inline-flex flex-col items-center mx-0.5">
+                        <span>(<span style={{color: c.color}}>&#9632;</span> &minus; <span style={{color: c.color, opacity: 0.5}}>&#9633;</span>)&sup2;</span>
+                        <span className="border-t border-slate-300 px-1"><span style={{color: c.color, opacity: 0.5}}>&#9633;</span></span>
+                      </span>
+                    </span>
+                  ))}
+                </div>
+                {/* Then numeric equation with actual values */}
                 <div className="text-center text-sm text-slate-800 leading-relaxed">
                   <span style={{ fontFamily: "Georgia, serif", fontSize: "1.1em" }}>&chi;</span>&sup2; ={" "}
                   {cellData.map((c, i) => {
@@ -262,19 +275,6 @@ export function Lesson7_ChiSquare({
                   })}
                   {" = "}
                   <strong>{chi2.toFixed(2)}</strong>
-                </div>
-                {/* Visual colored-block equation */}
-                <div className="text-center text-sm text-slate-800 leading-relaxed">
-                  <span style={{ fontFamily: "Georgia, serif", fontSize: "1.1em" }}>&chi;</span>&sup2; ={" "}
-                  {cellData.map((c, i) => (
-                    <span key={c.key}>
-                      {i > 0 && " + "}
-                      <span className="inline-flex flex-col items-center mx-0.5">
-                        <span>(<span style={{color: c.color}}>&#9632;</span> &minus; <span style={{color: c.color, opacity: 0.5}}>&#9633;</span>)&sup2;</span>
-                        <span className="border-t border-slate-300 px-1"><span style={{color: c.color, opacity: 0.5}}>&#9633;</span></span>
-                      </span>
-                    </span>
-                  ))}
                 </div>
               </div>
             );
