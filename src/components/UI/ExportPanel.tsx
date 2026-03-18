@@ -49,7 +49,8 @@ export function ExportButton({ values, lesson }: ExportPanelProps) {
 
   const handleFullScreen = () => {
     setOpen(false);
-    exportFullScreenPNG();
+    // Delay print until React re-renders and menu is gone
+    setTimeout(() => exportFullScreenPNG(), 100);
   };
 
   const handleLink = () => {
