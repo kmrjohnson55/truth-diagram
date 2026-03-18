@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { exportSVG, exportFullScreenPNG, exportViaPrint, generateShareableLink } from "../../utils/export";
+import { exportSVG, exportDiagramPNG, exportFullScreenPNG, generateShareableLink } from "../../utils/export";
 import type { CellValues } from "../../utils/statistics";
 
 interface ExportPanelProps {
@@ -37,9 +37,9 @@ export function ExportButton({ values, lesson }: ExportPanelProps) {
     setOpen(!open);
   };
 
-  const handlePNG = async () => {
+  const handleDiagramPNG = async () => {
     setOpen(false);
-    await exportFullScreenPNG(`truth-diagram-lesson${lesson || 0}.png`);
+    await exportDiagramPNG(`truth-diagram-lesson${lesson || 0}.png`);
   };
 
   const handleSVG = () => {
@@ -47,9 +47,9 @@ export function ExportButton({ values, lesson }: ExportPanelProps) {
     setOpen(false);
   };
 
-  const handlePrint = () => {
+  const handleFullScreen = () => {
     setOpen(false);
-    exportViaPrint();
+    exportFullScreenPNG();
   };
 
   const handleLink = () => {
@@ -79,28 +79,29 @@ export function ExportButton({ values, lesson }: ExportPanelProps) {
           style={{ top: menuPos.top, right: menuPos.right }}
         >
           <button
-            onClick={handlePrint}
+            onClick={handleDiagramPNG}
             className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
           >
-            <span className="font-medium">Print / Save as PDF</span>
+            <span className="font-medium">Diagram as PNG</span>
             <br />
-            <span className="text-xs text-slate-600">Best for publications and slides</span>
-          </button>
-          <button
-            onClick={handlePNG}
-            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            <span className="font-medium">Export as PNG</span>
-            <br />
-            <span className="text-xs text-slate-600">Screen capture image</span>
+            <span className="text-xs text-slate-600">High-res diagram only (no text), saves to Downloads</span>
           </button>
           <button
             onClick={handleSVG}
             className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
           >
-            <span className="font-medium">Export diagram as SVG</span>
+            <span className="font-medium">Diagram as SVG</span>
             <br />
             <span className="text-xs text-slate-600">Scalable vector of diagram only</span>
+          </button>
+          <hr className="my-1 border-slate-100" />
+          <button
+            onClick={handleFullScreen}
+            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <span className="font-medium">Full screen as PDF</span>
+            <br />
+            <span className="text-xs text-slate-600">Entire screen with all text (Print dialog)</span>
           </button>
           <hr className="my-1 border-slate-100" />
           <button

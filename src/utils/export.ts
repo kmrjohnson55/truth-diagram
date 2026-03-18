@@ -1,5 +1,5 @@
 /**
- * Export utilities: PNG from SVG, SVG download, print, shareable link
+ * Export utilities: PNG (diagram or full screen), SVG, print, shareable link
  */
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -13,105 +13,98 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-
 /**
- * Export the SVG diagram as a high-resolution PNG.
- * Finds the first SVG[viewBox] on the page, serializes it with
- * inlined styles, draws it onto a canvas at 3x scale, and downloads.
+ * Export the SVG diagram as a high-resolution PNG (diagram only, no clipping).
+ * Expands the viewBox to capture any overflow (labels, etc.).
  */
-export async function exportFullScreenPNG(
+export async function exportDiagramPNG(
   filename = "truth-diagram.png"
 ): Promise<void> {
   const svgEl = document.querySelector("svg[viewBox]") as SVGSVGElement;
   if (!svgEl) return;
 
-  const scale = 3; // 3x for publication quality
+  const scale = 3;
 
-  // Clone the SVG and prepare it for standalone rendering
+  // Get the actual bounding box of ALL rendered content (including overflow)
+  const bbox = svgEl.getBBox();
+  const padding = 20;
+  const x = bbox.x - padding;
+  const y = bbox.y - padding;
+  const width = bbox.width + padding * 2;
+  const height = bbox.height + padding * 2;
+
   const clone = svgEl.cloneNode(true) as SVGSVGElement;
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-
-  // Get viewBox dimensions
-  const vb = svgEl.viewBox.baseVal;
-  const width = vb.width || svgEl.clientWidth || 560;
-  const height = vb.height || svgEl.clientHeight || 500;
-
-  // Set explicit dimensions on clone
-  clone.setAttribute("width", String(width));
-  clone.setAttribute("height", String(height));
+  // Use the expanded bounding box as viewBox to capture everything
+  clone.setAttribute("viewBox", `${x} ${y} ${width} ${height}`);
+  clone.setAttribute("width", String(Math.ceil(width)));
+  clone.setAttribute("height", String(Math.ceil(height)));
   clone.style.background = "white";
-
-  // Remove overflow:visible (can cause issues with canvas rendering)
-  clone.style.overflow = "hidden";
+  clone.style.overflow = "visible";
 
   const svgString = new XMLSerializer().serializeToString(clone);
-  const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-  const url = URL.createObjectURL(svgBlob);
 
-  return new Promise<void>((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = width * scale;
-      canvas.height = height * scale;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        URL.revokeObjectURL(url);
-        resolve();
-        return;
-      }
-
-      ctx.fillStyle = "white";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      canvas.toBlob((blob) => {
-        if (blob) downloadBlob(blob, filename);
-        URL.revokeObjectURL(url);
-        resolve();
-      }, "image/png");
-    };
-    img.onerror = () => {
-      // If SVG-to-image fails, try with data URI approach
-      URL.revokeObjectURL(url);
-      const dataUri = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgString)));
-      const img2 = new Image();
-      img2.onload = () => {
+  // Try blob URL first, fall back to data URI
+  const renderToCanvas = (imgSrc: string): Promise<void> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
         const canvas = document.createElement("canvas");
-        canvas.width = width * scale;
-        canvas.height = height * scale;
+        canvas.width = Math.ceil(width) * scale;
+        canvas.height = Math.ceil(height) * scale;
         const ctx = canvas.getContext("2d");
         if (!ctx) { resolve(); return; }
         ctx.fillStyle = "white";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img2, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         canvas.toBlob((blob) => {
           if (blob) downloadBlob(blob, filename);
           resolve();
         }, "image/png");
       };
-      img2.onerror = () => resolve();
-      img2.src = dataUri;
-    };
-    img.src = url;
-  });
+      img.onerror = () => resolve();
+      img.src = imgSrc;
+    });
+  };
+
+  const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+  const blobUrl = URL.createObjectURL(svgBlob);
+
+  try {
+    await renderToCanvas(blobUrl);
+  } catch {
+    // Fallback: data URI
+    const dataUri = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgString)));
+    await renderToCanvas(dataUri);
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
 }
 
 /**
- * Export just the SVG diagram as a vector file
+ * Export the full screen (whole page) as PNG using Print/Save as PDF.
+ * This is the most reliable way to capture the entire layout with text.
+ */
+export function exportFullScreenPNG() {
+  window.print();
+}
+
+/**
+ * Export just the SVG diagram as a vector file (no clipping)
  */
 export function exportSVG(filename = "truth-diagram.svg") {
   const svgEl = document.querySelector("svg[viewBox]") as SVGSVGElement;
   if (!svgEl) return;
 
+  const bbox = svgEl.getBBox();
+  const padding = 20;
+
   const clone = svgEl.cloneNode(true) as SVGSVGElement;
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  clone.setAttribute("viewBox", `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + padding * 2} ${bbox.height + padding * 2}`);
+  clone.setAttribute("width", String(Math.ceil(bbox.width + padding * 2)));
+  clone.setAttribute("height", String(Math.ceil(bbox.height + padding * 2)));
   clone.style.background = "white";
-
-  // Set explicit dimensions
-  const vb = svgEl.viewBox.baseVal;
-  clone.setAttribute("width", String(vb.width || 560));
-  clone.setAttribute("height", String(vb.height || 500));
 
   const svgString = new XMLSerializer().serializeToString(clone);
   const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
@@ -119,7 +112,7 @@ export function exportSVG(filename = "truth-diagram.svg") {
 }
 
 /**
- * Use browser print dialog for best quality export (PDF or print)
+ * Use browser print dialog for best quality full-screen export (PDF)
  */
 export function exportViaPrint() {
   window.print();
