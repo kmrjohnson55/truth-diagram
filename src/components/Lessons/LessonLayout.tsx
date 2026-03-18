@@ -30,7 +30,7 @@ interface LessonLayoutProps {
 
 export function LessonLayout({
   meta,
-  totalLessons,
+  totalLessons: _totalLessons,
   onPrev: _onPrev,
   onNext: _onNext,
   onHome,

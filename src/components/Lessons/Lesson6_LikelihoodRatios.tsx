@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { DiagonalOverlays } from "../Diagram/DiagonalOverlays";
-import { formatStat, formatRatio } from "../../utils/statistics";
+import { formatRatio } from "../../utils/statistics";
 import { CELL_COLORS } from "../../utils/colors";
 import { presets, generalPresets, clinicalPresets } from "../../utils/presets";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
