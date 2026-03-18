@@ -13,17 +13,6 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Inline all computed styles on an SVG element so it renders correctly
- * when converted to an image (standalone, without CSS).
- */
-function inlineStyles(svgClone: SVGSVGElement) {
-  const allEls = svgClone.querySelectorAll("*");
-  allEls.forEach((el) => {
-    const computed = window.getComputedStyle(el as Element);
-    (el as HTMLElement).style.cssText = computed.cssText;
-  });
-}
 
 /**
  * Export the SVG diagram as a high-resolution PNG.
