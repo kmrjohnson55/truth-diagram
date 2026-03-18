@@ -130,7 +130,11 @@ export function Lesson5_Trajectory({
   // Fixed layout: computed from a "max extent" box that fits the full trajectory range.
   // Use the full diseased/healthy counts as the box dimensions (worst case positioning).
   const fixedLayout = useMemo(() => {
-    const maxValues: CellValues = { tp: diseased, fp: healthy, fn: 0, tn: 0 };
+    // The box can slide anywhere along the trajectory. At one extreme it's
+    // all TP/FP (upper-left), at the other it's all FN/TN (lower-right).
+    // We need space for the full horizontal (healthy) and vertical (diseased)
+    // extent on BOTH sides of the origin.
+    const maxValues: CellValues = { tp: diseased, fp: healthy, fn: diseased, tn: healthy };
     return computeLayout(maxValues, 560, 500, 85);
   }, [diseased, healthy]);
 
@@ -242,6 +246,8 @@ export function Lesson5_Trajectory({
             chance trajectory &mdash; the path a worthless test would follow,
             where the post-test probability equals the pre-test probability.
             The <strong>black dot</strong> marks the current operating point.
+            The shape of the trajectory is a property of a particular test.
+            The left upper corner of the subject box is constrained to the trajectory.
           </p>
         </div>
 
