@@ -10,7 +10,7 @@ import {
   thresholdFromSensitivity,
   computeAUC,
 } from "../../utils/trajectory";
-import { toSvg } from "../../utils/geometry";
+import { computeLayout, toSvg } from "../../utils/geometry";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
 import type { LessonNavProps } from "./lessonTypes";
 
@@ -127,6 +127,13 @@ export function Lesson5_Trajectory({
     });
   }, [trajectory, diseased, healthy]);
 
+  // Fixed layout: computed from a "max extent" box that fits the full trajectory range.
+  // Use the full diseased/healthy counts as the box dimensions (worst case positioning).
+  const fixedLayout = useMemo(() => {
+    const maxValues: CellValues = { tp: diseased, fp: healthy, fn: 0, tn: 0 };
+    return computeLayout(maxValues, 560, 500, 85);
+  }, [diseased, healthy]);
+
   return (
     <LessonLayout
       meta={{
@@ -158,6 +165,7 @@ export function Lesson5_Trajectory({
           onDrag={setValues}
           overlays={["sensitivity", "specificity"]}
           extraMargin={25}
+          fixedLayout={fixedLayout}
           renderExtraSvg={(layout) => {
             const { centerX: cx, centerY: cy, scale: s } = layout;
             const svgPts = trajectoryDiagramPoints.map((p) =>
