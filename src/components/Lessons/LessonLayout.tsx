@@ -23,6 +23,16 @@ interface LessonLayoutProps {
   values?: CellValues;
 }
 
+const SHORT_TITLES = [
+  "Box & Axes",
+  "Sens / Spec",
+  "PPV / NPV",
+  "Trajectory",
+  "LR & Bayes",
+  "Chi-Square",
+  "Sandbox",
+];
+
 export function LessonLayout({
   meta,
   totalLessons: _totalLessons,
@@ -30,7 +40,7 @@ export function LessonLayout({
   onNext: _onNext,
   onHome,
   onGoTo,
-  lessonTitles,
+  lessonTitles: _lessonTitles,
   diagram,
   keyInsight,
   diagramHeader,
@@ -39,32 +49,41 @@ export function LessonLayout({
 }: LessonLayoutProps) {
   return (
     <div className="flex flex-col h-full">
-      {/* Header: Home + dropdown nav + export — light background */}
-      <div className="px-4 py-2 bg-white border-b border-slate-200 flex items-center gap-3">
+      {/* Header: Home + individual screen buttons + export */}
+      <div className="px-3 py-2 bg-white border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto">
         <button
           onClick={onHome}
-          className="px-2.5 py-1 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors shrink-0"
+          className="px-2 py-1 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors shrink-0"
         >
           &larr; Home
         </button>
 
-        <select
-          value={meta.number}
-          onChange={(e) => {
-            const val = parseInt(e.target.value);
-            if (val === -1) onHome();
-            else onGoTo(val);
-          }}
-          className="px-3 py-1.5 text-sm font-bold bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-md
-            focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer min-w-[220px]"
+        <button
+          onClick={() => onGoTo(-1)}
+          className={`px-2 py-1 text-xs font-medium rounded-md transition-colors shrink-0 ${
+            meta.number === 0 ? "bg-indigo-100 text-indigo-700" : "text-slate-600 hover:bg-slate-100"
+          }`}
         >
-          <option value={-1}>Introduction</option>
-          {lessonTitles.map((title, i) => (
-            <option key={i} value={i + 1}>
-              {i + 1}. {title}
-            </option>
-          ))}
-        </select>
+          Intro
+        </button>
+
+        {SHORT_TITLES.map((title, i) => {
+          const num = i + 1;
+          const isCurrent = num === meta.number;
+          return (
+            <button
+              key={num}
+              onClick={() => onGoTo(num)}
+              className={`px-2 py-1 text-xs font-medium rounded-md transition-colors shrink-0 ${
+                isCurrent
+                  ? "bg-indigo-500 text-white"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              {num}. {title}
+            </button>
+          );
+        })}
 
         <div className="ml-auto shrink-0">
           {values && <ExportButton values={values} lesson={meta.number} />}

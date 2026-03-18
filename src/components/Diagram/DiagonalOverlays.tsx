@@ -47,7 +47,7 @@ export function DiagonalOverlays({
       <line x1={ll.x} y1={ll.y} x2={ur.x} y2={ur.y}
         stroke="#92400e" strokeWidth={2.5} strokeDasharray="6 4" opacity={0.7} />
       <text x={midBox.x + 8} y={midBox.y - 8}
-        fontSize={9} fontWeight={600} fill="#92400e" opacity={0.85}>
+        fontSize={11} fontWeight={600} fill="#92400e" opacity={0.85}>
         slope = odds before the test = {fmt(pretestSlope)}
       </text>
 
@@ -57,7 +57,7 @@ export function DiagonalOverlays({
           <line x1={posStart.x} y1={posStart.y} x2={posEnd.x} y2={posEnd.y}
             stroke="#16a34a" strokeWidth={3} opacity={0.85} />
           <text x={midPos.x - 8} y={midPos.y - 8}
-            fontSize={9} fontWeight={600} fill="#16a34a" textAnchor="end" opacity={0.9}>
+            fontSize={11} fontWeight={600} fill="#16a34a" textAnchor="end" opacity={0.9}>
             slope = odds after a positive test = {fmt(postPosSlope)}
           </text>
         </>
@@ -69,7 +69,7 @@ export function DiagonalOverlays({
           <line x1={negStart.x} y1={negStart.y} x2={negEnd.x} y2={negEnd.y}
             stroke="#dc2626" strokeWidth={3} opacity={0.85} />
           <text x={midNeg.x + 8} y={midNeg.y + 14}
-            fontSize={9} fontWeight={600} fill="#dc2626" opacity={0.9}>
+            fontSize={11} fontWeight={600} fill="#dc2626" opacity={0.9}>
             slope = odds after a negative test = {fmt(postNegSlope)}
           </text>
         </>

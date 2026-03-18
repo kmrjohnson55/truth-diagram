@@ -100,7 +100,7 @@ function App() {
   if (currentLesson === 4) {
     return (
       <AppShell>
-        <Lesson5_Trajectory key="lesson4" {...navProps} values={values} stats={stats} setValues={setValues} />
+        <Lesson5_Trajectory key="lesson4" {...navProps} {...dataProps} />
       </AppShell>
     );
   }

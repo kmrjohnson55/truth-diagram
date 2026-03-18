@@ -82,6 +82,13 @@ export function InputPanel({ values, setValue, setValues }: InputPanelProps) {
           </optgroup>
         </select>
       </div>
+
+      <button
+        onClick={() => setValues({ tp: 80, fp: 20, fn: 20, tn: 80 })}
+        className="w-full px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+      >
+        Reset to default values
+      </button>
     </div>
   );
 }

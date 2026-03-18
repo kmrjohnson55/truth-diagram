@@ -99,6 +99,8 @@ function ChiSquareContribLines({
   ];
 
   const origin = toSvg(0, 0, centerX, centerY, scale);
+  // Offset amount (pixels) to draw parallel lines side-by-side
+  const offset = 4;
 
   return (
     <g>
@@ -109,23 +111,28 @@ function ChiSquareContribLines({
         const expY = dir[1] * exp;
         const pObs = toSvg(obsX, obsY, centerX, centerY, scale);
         const pExp = toSvg(expX, expY, centerX, centerY, scale);
-        // Per Fig. 6: solid colored line from origin to observed,
-        // dashed colored line from observed to expected
+        // Per Fig. 6: draw two PARALLEL lines side by side
+        // Solid = origin to observed, Dashed = origin to expected
+        // Offset perpendicular to the axis direction
+        const perpX = dir[1] === 0 ? 0 : offset; // horizontal axes: offset vertically
+        const perpY = dir[0] === 0 ? 0 : offset; // vertical axes: offset horizontally
         return (
           <g key={key}>
             {/* Solid: origin → observed boundary */}
             <line
-              x1={origin.x} y1={origin.y} x2={pObs.x} y2={pObs.y}
+              x1={origin.x - perpX} y1={origin.y - perpY}
+              x2={pObs.x - perpX} y2={pObs.y - perpY}
               stroke={colors[key]}
-              strokeWidth={6}
-              opacity={0.7}
+              strokeWidth={5}
+              opacity={0.8}
               strokeLinecap="butt"
             />
-            {/* Dashed: observed → expected boundary */}
+            {/* Dashed: origin → expected boundary (offset parallel) */}
             <line
-              x1={pObs.x} y1={pObs.y} x2={pExp.x} y2={pExp.y}
+              x1={origin.x + perpX} y1={origin.y + perpY}
+              x2={pExp.x + perpX} y2={pExp.y + perpY}
               stroke={colors[key]}
-              strokeWidth={6}
+              strokeWidth={5}
               opacity={0.5}
               strokeLinecap="butt"
               strokeDasharray="4 3"
