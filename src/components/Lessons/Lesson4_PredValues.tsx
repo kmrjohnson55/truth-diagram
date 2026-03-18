@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
-import { InputPanel } from "../UI/InputPanel";
+import { TwoByTwoTable } from "../UI/TwoByTwoTable";
 import { LessonLayout } from "./LessonLayout";
 import { formatStat, computeStats } from "../../utils/statistics";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
@@ -55,6 +55,7 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
         </div>
       }
       values={values}
+      diagramFooter={!showComparison ? <TwoByTwoTable values={values} setValue={setValue} setValues={setValues} /> : undefined}
       diagram={
         <TruthDiagram
           values={showComparison ? lowPrevValues : values}
@@ -164,12 +165,6 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
           </div>
         )}
 
-        {!showComparison && (
-          <>
-            <hr className="border-slate-100" />
-            <InputPanel values={values} setValue={setValue} setValues={setValues} />
-          </>
-        )}
 
       </div>
     </LessonLayout>

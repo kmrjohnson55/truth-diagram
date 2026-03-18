@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
-import { InputPanel } from "../UI/InputPanel";
+import { TwoByTwoTable } from "../UI/TwoByTwoTable";
 import {
   computeExpectedValues,
   computeChiSquare,
@@ -50,13 +50,14 @@ function GhostExpectedBox({
         strokeDasharray="8 4"
         opacity={0.6}
       />
-      {/* Label */}
+      {/* Label at bottom-left of expected box */}
       <text
-        x={ur.x + 4}
-        y={ur.y - 6}
+        x={ll.x - 4}
+        y={lr.y + 14}
         fontSize={10}
         fill="#94a3b8"
         fontWeight={500}
+        textAnchor="start"
       >
         Expected
       </text>
@@ -158,7 +159,7 @@ export function Lesson7_ChiSquare({
   onGoTo,
   lessonTitles,
 }: Lesson7Props) {
-  const [showContributions, setShowContributions] = useState(false);
+  const showContributions = true;
   const expected = useMemo(() => computeExpectedValues(values), [values]);
   const chi2 = useMemo(() => computeChiSquare(values, expected), [values, expected]);
   const pValue = useMemo(() => chiSquarePValue(chi2), [chi2]);
@@ -205,6 +206,7 @@ export function Lesson7_ChiSquare({
         </div>
       }
       values={values}
+      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
       diagram={
         <TruthDiagram
           values={values}
@@ -232,30 +234,30 @@ export function Lesson7_ChiSquare({
           )}
           belowDiagramText={
             <div className="space-y-2">
-              <div className="text-center">
-                <span style={{ fontFamily: "Georgia, serif" }}>&chi;</span>&sup2; ={" "}
-                <span className="inline-flex items-center gap-1">
-                  &Sigma;
-                  <span className="inline-flex flex-col items-center text-xs leading-tight">
-                    <span>(observed &minus; expected)&sup2;</span>
-                    <span className="border-t border-slate-400">expected</span>
-                  </span>
-                </span>
-                {" = "}
-                &Sigma;{" "}
-                <span className="inline-flex flex-col items-center text-xs leading-tight">
-                  <span>
-                    (<span style={{color: CELL_COLORS.tp}}>&#9608;</span>{" "}
-                    <span style={{color: CELL_COLORS.fp}}>&#9608;</span>{" "}
-                    <span style={{color: CELL_COLORS.fn}}>&#9608;</span>{" "}
-                    <span style={{color: CELL_COLORS.tn}}>&#9608;</span>)&sup2;
-                  </span>
-                  <span className="border-t border-slate-400">expected</span>
-                </span>
+              <div className="text-xs text-slate-600 text-center">
+                Solid colors are observed values, dotted colors are expected values.
               </div>
-              <div className="text-center text-slate-600">
-                <strong>Try it:</strong> Drag the box toward the origin &mdash; the solid and dashed boxes
-                converge and <span style={{ fontFamily: "Georgia, serif" }}>&chi;</span>&sup2; shrinks toward zero.
+              <div className="text-center text-sm text-slate-800 font-medium leading-relaxed">
+                <span style={{ fontFamily: "Georgia, serif", fontSize: "1.1em" }}>&chi;</span>&sup2; ={" "}
+                <span className="inline-flex flex-col items-center mx-1">
+                  <span>(<span style={{color: CELL_COLORS.tp}}>&#9632;</span> &minus; <span style={{color: CELL_COLORS.tp}}>&#9633;</span>)&sup2;</span>
+                  <span className="border-t border-slate-400 text-xs"><span style={{color: CELL_COLORS.tp}}>&#9633;</span></span>
+                </span>
+                {" + "}
+                <span className="inline-flex flex-col items-center mx-1">
+                  <span>(<span style={{color: CELL_COLORS.tn}}>&#9632;</span> &minus; <span style={{color: CELL_COLORS.tn}}>&#9633;</span>)&sup2;</span>
+                  <span className="border-t border-slate-400 text-xs"><span style={{color: CELL_COLORS.tn}}>&#9633;</span></span>
+                </span>
+                {" + "}
+                <span className="inline-flex flex-col items-center mx-1">
+                  <span>(<span style={{color: CELL_COLORS.fn}}>&#9632;</span> &minus; <span style={{color: CELL_COLORS.fn}}>&#9633;</span>)&sup2;</span>
+                  <span className="border-t border-slate-400 text-xs"><span style={{color: CELL_COLORS.fn}}>&#9633;</span></span>
+                </span>
+                {" + "}
+                <span className="inline-flex flex-col items-center mx-1">
+                  <span>(<span style={{color: CELL_COLORS.fp}}>&#9632;</span> &minus; <span style={{color: CELL_COLORS.fp}}>&#9633;</span>)&sup2;</span>
+                  <span className="border-t border-slate-400 text-xs"><span style={{color: CELL_COLORS.fp}}>&#9633;</span></span>
+                </span>
               </div>
             </div>
           }
@@ -311,16 +313,6 @@ export function Lesson7_ChiSquare({
               ? "Significant association between test result and disease status (p < 0.05)"
               : "No significant association detected (p \u2265 0.05)"}
           </div>
-          <button
-            onClick={() => setShowContributions(!showContributions)}
-            className={`w-full px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-              showContributions
-                ? "bg-indigo-500 text-white"
-                : "bg-indigo-200 text-indigo-800 hover:bg-indigo-300"
-            }`}
-          >
-            {showContributions ? "Hide" : "Show"} per-cell contributions on diagram
-          </button>
         </div>
 
         {/* Expected values table (moved below chi-square box) */}
@@ -361,8 +353,6 @@ export function Lesson7_ChiSquare({
           </div>
         </div>
 
-        <hr className="border-slate-100" />
-        <InputPanel values={values} setValue={setValue} setValues={setValues} />
       </div>
     </LessonLayout>
   );

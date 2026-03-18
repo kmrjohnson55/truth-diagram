@@ -1,7 +1,7 @@
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { DiagonalOverlays } from "../Diagram/DiagonalOverlays";
-import { InputPanel } from "../UI/InputPanel";
+import { TwoByTwoTable } from "../UI/TwoByTwoTable";
 import { formatRatio } from "../../utils/statistics";
 import { CELL_COLORS } from "../../utils/colors";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
@@ -50,6 +50,7 @@ export function Lesson6_LikelihoodRatios({
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       values={values}
+      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
@@ -189,8 +190,6 @@ export function Lesson6_LikelihoodRatios({
           </div>
         </div>
 
-        <hr className="border-slate-100" />
-        <InputPanel values={values} setValue={setValue} setValues={setValues} />
       </div>
     </LessonLayout>
   );

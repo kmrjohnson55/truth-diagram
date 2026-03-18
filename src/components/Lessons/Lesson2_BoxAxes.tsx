@@ -1,5 +1,5 @@
 import { TruthDiagram } from "../Diagram/TruthDiagram";
-import { InputPanel } from "../UI/InputPanel";
+import { TwoByTwoTable } from "../UI/TwoByTwoTable";
 import { LessonLayout } from "./LessonLayout";
 import { formatStat } from "../../utils/statistics";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
@@ -33,6 +33,7 @@ export function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLesso
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       values={values}
+      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
       diagram={
         <TruthDiagram
           values={values}
@@ -91,8 +92,6 @@ export function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLesso
           </div>
         </div>
 
-        <hr className="border-slate-100" />
-        <InputPanel values={values} setValue={setValue} setValues={setValues} />
       </div>
     </LessonLayout>
   );

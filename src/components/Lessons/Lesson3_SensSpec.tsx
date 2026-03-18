@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
-import { InputPanel } from "../UI/InputPanel";
+import { TwoByTwoTable } from "../UI/TwoByTwoTable";
 import { LessonLayout } from "./LessonLayout";
 import { formatStat, computeStats } from "../../utils/statistics";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
@@ -43,6 +43,7 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       values={values}
+      diagramFooter={!showLowPrev ? <TwoByTwoTable values={values} setValue={setValue} setValues={setValues} /> : undefined}
       diagram={
         <TruthDiagram
           values={displayValues}
@@ -128,12 +129,6 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
           </div>
         )}
 
-        {!showLowPrev && (
-          <>
-            <hr className="border-slate-100" />
-            <InputPanel values={values} setValue={setValue} setValues={setValues} />
-          </>
-        )}
       </div>
     </LessonLayout>
   );

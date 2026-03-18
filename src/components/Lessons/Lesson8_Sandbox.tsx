@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { DiagonalOverlays } from "../Diagram/DiagonalOverlays";
-import { InputPanel } from "../UI/InputPanel";
+import { TwoByTwoTable } from "../UI/TwoByTwoTable";
 import {
   formatStat,
   formatRatio,
@@ -74,7 +74,7 @@ export function Lesson8_Sandbox({
   // Overlay toggle state
   const [activeOverlays, setActiveOverlays] = useState<OverlayType[]>([]);
   const [showDiagonals, setShowDiagonals] = useState(false);
-  const [showTable, setShowTable] = useState(false);
+  const [_showTable] = useState(false);
 
   const toggleOverlay = (ov: OverlayType) => {
     setActiveOverlays((prev) =>
@@ -100,6 +100,8 @@ export function Lesson8_Sandbox({
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
+      values={values}
+      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
       diagram={
         <TruthDiagram
           values={values}
@@ -157,86 +159,11 @@ export function Lesson8_Sandbox({
               color="#64748b"
               onClick={() => setShowDiagonals(!showDiagonals)}
             />
-            <OverlayToggle
-              label="2×2 Table"
-              active={showTable}
-              color="#6366f1"
-              onClick={() => setShowTable(!showTable)}
-            />
           </div>
         </div>
 
         <hr className="border-slate-100" />
 
-        {/* Contingency table (from former Lesson 1) */}
-        {showTable && (
-          <>
-            <div className="space-y-3">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="p-2"></th>
-                      <th className="p-2 text-center font-semibold text-slate-600 border-b-2 border-slate-200">Disease +</th>
-                      <th className="p-2 text-center font-semibold text-slate-600 border-b-2 border-slate-200">Disease &minus;</th>
-                      <th className="p-2 text-center font-semibold text-slate-600 border-b-2 border-slate-100">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="p-2 font-semibold text-slate-600 border-r-2 border-slate-200">Test +</td>
-                      <td className="p-2 text-center">
-                        <span className="inline-block px-3 py-1 rounded-md bg-green-50 text-green-700 font-bold border border-green-200">TP = {tp}</span>
-                      </td>
-                      <td className="p-2 text-center">
-                        <span className="inline-block px-3 py-1 rounded-md bg-yellow-50 text-yellow-700 font-bold border border-yellow-200">FP = {fp}</span>
-                      </td>
-                      <td className="p-2 text-center text-slate-600 font-medium">{testPos}</td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 font-semibold text-slate-600 border-r-2 border-slate-200">Test &minus;</td>
-                      <td className="p-2 text-center">
-                        <span className="inline-block px-3 py-1 rounded-md bg-red-50 text-red-700 font-bold border border-red-200">FN = {fn}</span>
-                      </td>
-                      <td className="p-2 text-center">
-                        <span className="inline-block px-3 py-1 rounded-md bg-blue-50 text-blue-700 font-bold border border-blue-200">TN = {tn}</span>
-                      </td>
-                      <td className="p-2 text-center text-slate-600 font-medium">{testNeg}</td>
-                    </tr>
-                    <tr className="border-t-2 border-slate-200">
-                      <td className="p-2 font-semibold text-slate-600">Total</td>
-                      <td className="p-2 text-center text-slate-600 font-medium">{diseased}</td>
-                      <td className="p-2 text-center text-slate-600 font-medium">{healthy}</td>
-                      <td className="p-2 text-center text-slate-600 font-bold">{total}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div className="grid grid-cols-1 gap-1.5 text-xs">
-                <div className="flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500 mt-0.5 shrink-0" />
-                  <span className="text-slate-600"><strong className="text-green-700">TP:</strong> Disease + and Test +</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-yellow-500 mt-0.5 shrink-0" />
-                  <span className="text-slate-600"><strong className="text-yellow-700">FP:</strong> Disease &minus; but Test +</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-500 mt-0.5 shrink-0" />
-                  <span className="text-slate-600"><strong className="text-red-700">FN:</strong> Disease + but Test &minus;</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-500 mt-0.5 shrink-0" />
-                  <span className="text-slate-600"><strong className="text-blue-700">TN:</strong> Disease &minus; and Test &minus;</span>
-                </div>
-              </div>
-            </div>
-            <hr className="border-slate-100" />
-          </>
-        )}
-
-        {/* Input panel */}
-        <InputPanel values={values} setValue={setValue} setValues={setValues} />
 
         <hr className="border-slate-100" />
 

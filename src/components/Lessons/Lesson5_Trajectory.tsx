@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
-import { InputPanel } from "../UI/InputPanel";
+import { TwoByTwoTable } from "../UI/TwoByTwoTable";
 import { formatStat, computeStats } from "../../utils/statistics";
 import {
   computeDPrime,
@@ -151,6 +151,7 @@ export function Lesson5_Trajectory({
         </div>
       }
       values={values}
+      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
       diagram={
         <TruthDiagram
           values={sliderValues}
@@ -184,7 +185,7 @@ export function Lesson5_Trajectory({
                   x2={chanceEnd.x} y2={chanceEnd.y}
                   stroke="#ef4444" strokeWidth={1.5} strokeDasharray="8 5" opacity={0.5}
                 />
-                <text x={chanceEnd.x + 4} y={chanceEnd.y + 14}
+                <text x={(chanceStart.x + chanceEnd.x) / 2 + 4} y={(chanceStart.y + chanceEnd.y) / 2 + 14}
                   fontSize={9} fill="#ef4444" fontWeight={500} opacity={0.7}>
                   Chance trajectory
                 </text>
@@ -283,35 +284,7 @@ export function Lesson5_Trajectory({
           </div>
         </div>
 
-        {/* Preset selector */}
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">Presets</label>
-          <select
-            onChange={(e) => {
-              const preset = presets[parseInt(e.target.value)];
-              if (preset) setValues(preset.values);
-            }}
-            defaultValue=""
-            className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md
-              focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent
-              bg-white text-slate-800"
-          >
-            <option value="" disabled>Load a preset...</option>
-            <optgroup label="General Examples">
-              {generalPresets.map((p) => (
-                <option key={p.name} value={presets.indexOf(p)}>{p.name}</option>
-              ))}
-            </optgroup>
-            <optgroup label="Clinical Examples">
-              {clinicalPresets.map((p) => (
-                <option key={p.name} value={presets.indexOf(p)}>{p.name}</option>
-              ))}
-            </optgroup>
-          </select>
-        </div>
 
-        <hr className="border-slate-100" />
-        <InputPanel values={values} setValue={setValue} setValues={setValues} />
       </div>
     </LessonLayout>
   );

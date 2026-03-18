@@ -19,6 +19,8 @@ interface LessonLayoutProps {
   diagram: ReactNode;
   keyInsight?: ReactNode;
   diagramHeader?: ReactNode;
+  /** Content rendered below the diagram on the left (2x2 table, presets, etc.) */
+  diagramFooter?: ReactNode;
   children: ReactNode;
   values?: CellValues;
 }
@@ -44,12 +46,13 @@ export function LessonLayout({
   diagram,
   keyInsight,
   diagramHeader,
+  diagramFooter,
   children,
   values,
 }: LessonLayoutProps) {
   return (
     <div className="flex flex-col h-full">
-      {/* Header: Home + individual screen buttons + export */}
+      {/* Header */}
       <div className="px-3 py-2 bg-white border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto">
         <button
           onClick={onHome}
@@ -57,7 +60,6 @@ export function LessonLayout({
         >
           &larr; Home
         </button>
-
         <button
           onClick={() => onGoTo(-1)}
           className={`px-2 py-1 text-xs font-medium rounded-md transition-colors shrink-0 ${
@@ -66,7 +68,6 @@ export function LessonLayout({
         >
           Intro
         </button>
-
         {SHORT_TITLES.map((title, i) => {
           const num = i + 1;
           const isCurrent = num === meta.number;
@@ -84,7 +85,6 @@ export function LessonLayout({
             </button>
           );
         })}
-
         <div className="ml-auto shrink-0">
           {values && <ExportButton values={values} lesson={meta.number} />}
         </div>
@@ -92,12 +92,19 @@ export function LessonLayout({
 
       {/* Main content */}
       <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6 overflow-auto">
+        {/* Left: Diagram + footer */}
         <div className="flex-1 min-w-0 lg:w-3/5">
           {diagramHeader && <div className="mb-3">{diagramHeader}</div>}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
             {diagram}
           </div>
+          {diagramFooter && (
+            <div className="mt-3 bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+              {diagramFooter}
+            </div>
+          )}
         </div>
+        {/* Right: Educational content */}
         <div className="w-full lg:w-2/5 shrink-0">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4 h-full overflow-auto">
             {keyInsight}
