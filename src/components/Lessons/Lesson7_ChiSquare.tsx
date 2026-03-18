@@ -232,35 +232,53 @@ export function Lesson7_ChiSquare({
               )}
             </>
           )}
-          belowDiagramText={
-            <div className="space-y-2">
-              <div className="text-xs text-slate-600 text-center">
-                Solid colors are observed values, dotted colors are expected values.
+          belowDiagramText={(() => {
+            const cellData = [
+              { key: "tp" as const, color: CELL_COLORS.tp, label: "TP" },
+              { key: "tn" as const, color: CELL_COLORS.tn, label: "TN" },
+              { key: "fn" as const, color: CELL_COLORS.fn, label: "FN" },
+              { key: "fp" as const, color: CELL_COLORS.fp, label: "FP" },
+            ];
+            return (
+              <div className="space-y-3">
+                <div className="text-xs text-slate-600 text-center">
+                  Solid colors are observed values, dotted colors are expected values.
+                </div>
+                {/* Numeric equation */}
+                <div className="text-center text-sm text-slate-800 leading-relaxed">
+                  <span style={{ fontFamily: "Georgia, serif", fontSize: "1.1em" }}>&chi;</span>&sup2; ={" "}
+                  {cellData.map((c, i) => {
+                    const o = values[c.key];
+                    const e = expected[c.key];
+                    return (
+                      <span key={c.key}>
+                        {i > 0 && " + "}
+                        <span className="inline-flex flex-col items-center mx-0.5">
+                          <span style={{color: c.color}}>({o} &minus; {e.toFixed(1)})&sup2;</span>
+                          <span className="border-t border-slate-300 px-1" style={{color: c.color}}>{e.toFixed(1)}</span>
+                        </span>
+                      </span>
+                    );
+                  })}
+                  {" = "}
+                  <strong>{chi2.toFixed(2)}</strong>
+                </div>
+                {/* Visual colored-block equation */}
+                <div className="text-center text-sm text-slate-800 leading-relaxed">
+                  <span style={{ fontFamily: "Georgia, serif", fontSize: "1.1em" }}>&chi;</span>&sup2; ={" "}
+                  {cellData.map((c, i) => (
+                    <span key={c.key}>
+                      {i > 0 && " + "}
+                      <span className="inline-flex flex-col items-center mx-0.5">
+                        <span>(<span style={{color: c.color}}>&#9632;</span> &minus; <span style={{color: c.color, opacity: 0.5}}>&#9633;</span>)&sup2;</span>
+                        <span className="border-t border-slate-300 px-1"><span style={{color: c.color, opacity: 0.5}}>&#9633;</span></span>
+                      </span>
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="text-center text-sm text-slate-800 font-medium leading-relaxed">
-                <span style={{ fontFamily: "Georgia, serif", fontSize: "1.1em" }}>&chi;</span>&sup2; ={" "}
-                <span className="inline-flex flex-col items-center mx-1">
-                  <span>(<span style={{color: CELL_COLORS.tp}}>&#9632;</span> &minus; <span style={{color: CELL_COLORS.tp}}>&#9633;</span>)&sup2;</span>
-                  <span className="border-t border-slate-400 text-xs"><span style={{color: CELL_COLORS.tp}}>&#9633;</span></span>
-                </span>
-                {" + "}
-                <span className="inline-flex flex-col items-center mx-1">
-                  <span>(<span style={{color: CELL_COLORS.tn}}>&#9632;</span> &minus; <span style={{color: CELL_COLORS.tn}}>&#9633;</span>)&sup2;</span>
-                  <span className="border-t border-slate-400 text-xs"><span style={{color: CELL_COLORS.tn}}>&#9633;</span></span>
-                </span>
-                {" + "}
-                <span className="inline-flex flex-col items-center mx-1">
-                  <span>(<span style={{color: CELL_COLORS.fn}}>&#9632;</span> &minus; <span style={{color: CELL_COLORS.fn}}>&#9633;</span>)&sup2;</span>
-                  <span className="border-t border-slate-400 text-xs"><span style={{color: CELL_COLORS.fn}}>&#9633;</span></span>
-                </span>
-                {" + "}
-                <span className="inline-flex flex-col items-center mx-1">
-                  <span>(<span style={{color: CELL_COLORS.fp}}>&#9632;</span> &minus; <span style={{color: CELL_COLORS.fp}}>&#9633;</span>)&sup2;</span>
-                  <span className="border-t border-slate-400 text-xs"><span style={{color: CELL_COLORS.fp}}>&#9633;</span></span>
-                </span>
-              </div>
-            </div>
-          }
+            );
+          })()}
         />
       }
     >
