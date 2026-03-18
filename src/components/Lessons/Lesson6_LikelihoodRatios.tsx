@@ -54,6 +54,7 @@ export function Lesson6_LikelihoodRatios({
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
+      values={values}
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
@@ -79,11 +80,11 @@ export function Lesson6_LikelihoodRatios({
           )}
           belowDiagramText={
             <>
-              <strong>+LR</strong> = positive odds / pretest odds
+              <strong>+LR</strong> = post-test odds (+) / pretest odds
               = {formatRatio(posttestOddsPos)} / {formatRatio(pretestOdds)}
               = <strong>{formatRatio(posLR)}</strong>
               <br />
-              <strong>&minus;LR</strong> = negative odds / pretest odds
+              <strong>&minus;LR</strong> = post-test odds (&minus;) / pretest odds
               = {formatRatio(posttestOddsNeg)} / {formatRatio(pretestOdds)}
               = <strong>{formatRatio(negLR)}</strong>
             </>
@@ -163,19 +164,18 @@ export function Lesson6_LikelihoodRatios({
             Likelihood Ratios
           </h3>
           <p className="text-sm text-slate-600 leading-relaxed mb-3">
-            Each LR is the ratio of a posttest odds to the pretest odds &mdash;
-            it measures how much the test result shifts the odds, independent of prevalence.
+            Thus the likelihood ratio is simply the factor by which the pretest slope (odds) is increased (+LR) or decreased (&minus;LR) by the test.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
               <div className="text-xs text-orange-600 font-semibold uppercase">+LR</div>
-              <div className="text-xs font-mono text-orange-700 mt-1">Sens / (1&minus;Spec)</div>
+              <div className="text-xs font-mono text-orange-700 mt-1">odds after + test / pretest odds</div>
               <div className="text-lg font-bold text-orange-700">{formatRatio(posLR)}</div>
               <div className="text-xs text-orange-600 mt-1">Higher is better (&gt;10 = strong)</div>
             </div>
             <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 text-center">
               <div className="text-xs text-teal-600 font-semibold uppercase">&minus;LR</div>
-              <div className="text-xs font-mono text-teal-700 mt-1">(1&minus;Sens) / Spec</div>
+              <div className="text-xs font-mono text-teal-700 mt-1">odds after &minus; test / pretest odds</div>
               <div className="text-lg font-bold text-teal-700">{formatRatio(negLR)}</div>
               <div className="text-xs text-teal-600 mt-1">Lower is better (&lt;0.1 = strong)</div>
             </div>

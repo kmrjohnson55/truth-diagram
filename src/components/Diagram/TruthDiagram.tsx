@@ -15,6 +15,8 @@ interface TruthDiagramProps {
   renderExtraSvg?: (layout: { centerX: number; centerY: number; scale: number }) => React.ReactNode;
   /** Optional text displayed below the diagram, replacing the default drag hint */
   belowDiagramText?: React.ReactNode;
+  /** Extra margin for layout (e.g., to fit expected box in chi-square) */
+  extraMargin?: number;
 }
 
 const SVG_WIDTH = 560;
@@ -24,7 +26,7 @@ const CORNER_HIT_RADIUS = 12;
 
 type DragMode = "box" | "corner-ul" | "corner-ur" | "corner-ll" | "corner-lr" | null;
 
-export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText }: TruthDiagramProps) {
+export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText, extraMargin = 0 }: TruthDiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const dragStart = useRef<{
@@ -34,7 +36,7 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
   const [hoverCorner, setHoverCorner] = useState<string | null>(null);
 
   const computedLayout = useMemo(
-    () => computeLayout(values, SVG_WIDTH, SVG_HEIGHT, 60),
+    () => computeLayout(values, SVG_WIDTH, SVG_HEIGHT, 60 + extraMargin),
     [values]
   );
 

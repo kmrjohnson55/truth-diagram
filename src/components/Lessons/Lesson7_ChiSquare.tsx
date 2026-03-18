@@ -188,16 +188,18 @@ export function Lesson7_ChiSquare({
             <strong>On the diagram:</strong> The{" "}
             <span className="text-slate-600 font-semibold">dashed gray box</span>{" "}
             shows where the box would sit under the null hypothesis of
-            independence (no association). The displacement between the
+            independence (no association), in other words, if the test had no effect on the likelihood of disease. The displacement between the
             solid and dashed boxes corresponds to the &chi;&sup2; value.
           </p>
         </div>
       }
+      values={values}
       diagram={
         <TruthDiagram
           values={values}
           onDrag={setValues}
           overlays={[]}
+          extraMargin={30}
           renderExtraSvg={(layout) => (
             <>
               <GhostExpectedBox
@@ -217,24 +219,17 @@ export function Lesson7_ChiSquare({
               )}
             </>
           )}
+          belowDiagramText={
+            <>
+              <strong>Try it:</strong> Drag the box toward the origin &mdash; the
+              solid and dashed boxes converge and &chi;&sup2; shrinks toward zero.
+              Load &quot;Worthless Test&quot; for perfect overlap.
+            </>
+          }
         />
       }
     >
       <div className="space-y-5">
-        {/* Contribution visualization toggle */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowContributions(!showContributions)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-              showContributions
-                ? "bg-indigo-500 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            {showContributions ? "Hide" : "Show"} &chi;&sup2; contributions on diagram
-          </button>
-        </div>
-
         {/* What you see on the diagram */}
         <div>
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
@@ -249,7 +244,53 @@ export function Lesson7_ChiSquare({
           </p>
         </div>
 
-        {/* How expected values are computed */}
+        {/* Chi-square statistic box (with toggle inside) */}
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-2">
+          <h3 className="text-sm font-bold text-indigo-800 uppercase tracking-wide" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            &#x3C7;&sup2; Statistic
+          </h3>
+          <div className="text-sm font-mono text-indigo-800">
+            <span style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>&#x3C7;</span>&sup2; = &Sigma;(O&minus;E)&sup2;/E ={" "}
+            <strong className="text-lg">{formatRatio(chi2)}</strong>
+          </div>
+          <p className="text-xs text-indigo-600 leading-relaxed">
+            Each cell contributes the squared distance between observed and
+            expected, normalized by expected. Larger displacements on the
+            diagram produce larger values.
+          </p>
+          <div className="text-sm text-indigo-700">
+            p-value ={" "}
+            <strong>
+              {pValue < 0.001
+                ? "< 0.001"
+                : pValue.toFixed(4)}
+            </strong>
+            <span className="text-xs text-indigo-600 ml-1">(df = 1)</span>
+          </div>
+          <div
+            className={`text-sm font-medium rounded-md px-3 py-1.5 ${
+              pValue < 0.05
+                ? "bg-green-100 text-green-800"
+                : "bg-amber-100 text-amber-800"
+            }`}
+          >
+            {pValue < 0.05
+              ? "Significant association between test result and disease status (p < 0.05)"
+              : "No significant association detected (p \u2265 0.05)"}
+          </div>
+          <button
+            onClick={() => setShowContributions(!showContributions)}
+            className={`w-full px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+              showContributions
+                ? "bg-indigo-500 text-white"
+                : "bg-indigo-200 text-indigo-800 hover:bg-indigo-300"
+            }`}
+          >
+            {showContributions ? "Hide" : "Show"} per-cell contributions on diagram
+          </button>
+        </div>
+
+        {/* Expected values table (moved below chi-square box) */}
         <div>
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
             Expected Values (Under H&#8320;)
@@ -285,51 +326,6 @@ export function Lesson7_ChiSquare({
               </tbody>
             </table>
           </div>
-        </div>
-
-        {/* Chi-square result */}
-        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-2">
-          <h3 className="text-sm font-bold text-indigo-800 uppercase tracking-wide">
-            &chi;&sup2; Statistic
-          </h3>
-          <div className="text-sm font-mono text-indigo-800">
-            &chi;&sup2; = &Sigma;(O&minus;E)&sup2;/E ={" "}
-            <strong className="text-lg">{formatRatio(chi2)}</strong>
-          </div>
-          <p className="text-xs text-indigo-600 leading-relaxed">
-            Each cell contributes the squared distance between observed and
-            expected, normalized by expected. Larger displacements on the
-            diagram produce larger &chi;&sup2; values.
-          </p>
-          <div className="text-sm text-indigo-700">
-            p-value ={" "}
-            <strong>
-              {pValue < 0.001
-                ? "< 0.001"
-                : pValue.toFixed(4)}
-            </strong>
-            <span className="text-xs text-indigo-600 ml-1">(df = 1)</span>
-          </div>
-          <div
-            className={`mt-2 text-sm font-medium rounded-md px-3 py-1.5 ${
-              pValue < 0.05
-                ? "bg-green-100 text-green-800"
-                : "bg-amber-100 text-amber-800"
-            }`}
-          >
-            {pValue < 0.05
-              ? "Significant association between test result and disease status (p < 0.05)"
-              : "No significant association detected (p \u2265 0.05)"}
-          </div>
-        </div>
-
-        {/* Try it */}
-        <div className="text-xs text-slate-600 bg-slate-50 rounded-lg p-3">
-          <strong>Try it:</strong> Drag the box toward the origin &mdash; the
-          solid and dashed boxes converge and &chi;&sup2; shrinks toward zero.
-          Load the &quot;Worthless Test&quot; preset to see perfect overlap
-          (&chi;&sup2; &asymp; 0), then load &quot;Balanced Example&quot; to see
-          a significant displacement.
         </div>
 
         <hr className="border-slate-100" />

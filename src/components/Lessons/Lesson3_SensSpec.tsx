@@ -2,7 +2,7 @@ import { useState } from "react";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { InputPanel } from "../UI/InputPanel";
 import { LessonLayout } from "./LessonLayout";
-import { formatStat } from "../../utils/statistics";
+import { formatStat, computeStats } from "../../utils/statistics";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
 import type { LessonNavProps } from "./lessonTypes";
 
@@ -19,6 +19,21 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
   const healthy = fp + tn;
 
   const [activeView, setActiveView] = useState<"sensitivity" | "specificity">("sensitivity");
+  const [showLowPrev, setShowLowPrev] = useState(false);
+
+  // Build a low-prevalence version keeping same sens/spec
+  const lowPrevTotal = 1000;
+  const lowPrevDiseased = 50; // 5% prevalence
+  const lowPrevHealthy = lowPrevTotal - lowPrevDiseased;
+  const lowPrevTp = Math.round(stats.sensitivity * lowPrevDiseased);
+  const lowPrevFn = lowPrevDiseased - lowPrevTp;
+  const lowPrevTn = Math.round(stats.specificity * lowPrevHealthy);
+  const lowPrevFp = lowPrevHealthy - lowPrevTn;
+  const lowPrevValues: CellValues = { tp: lowPrevTp, fp: lowPrevFp, fn: lowPrevFn, tn: lowPrevTn };
+  const lowPrevStats = computeStats(lowPrevValues);
+
+  const displayValues = showLowPrev ? lowPrevValues : values;
+  const displayStats = showLowPrev ? lowPrevStats : stats;
 
   return (
     <LessonLayout
@@ -29,10 +44,11 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
+      values={values}
       diagram={
         <TruthDiagram
-          values={values}
-          onDrag={setValues}
+          values={displayValues}
+          onDrag={showLowPrev ? undefined : setValues}
           overlays={[activeView]}
           belowDiagramText={
             <>
@@ -44,10 +60,16 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
         />
       }
       keyInsight={
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
           <p className="text-sm text-amber-800">
-            <strong>Key insight:</strong> Sensitivity and specificity are properties of the <em>test itself</em>. They describe what the test does to diseased and healthy patients respectively. They do <strong>not</strong> depend on how common the disease is (prevalence).
+            <strong>Key insight:</strong> Sensitivity and specificity are properties of the <em>test itself</em>. They describe how the test performs in diseased and healthy patients respectively. They do <strong>not</strong> depend on how common the disease is (prevalence).
           </p>
+          <button
+            onClick={() => setShowLowPrev(!showLowPrev)}
+            className="mt-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-200 text-amber-800 hover:bg-amber-300 transition-colors"
+          >
+            {showLowPrev ? "Show original values" : "Show same test at 5% prevalence"}
+          </button>
         </div>
       }
     >
@@ -84,12 +106,9 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
           </p>
           <div className="mt-3 bg-green-50 rounded-lg p-3 space-y-2">
             <div className="text-sm font-mono text-green-800">Sensitivity = TP / (TP + FN)</div>
-            <div className="text-sm font-mono text-green-800">= {tp} / ({tp} + {fn}) = {tp} / {diseased}</div>
-            <div className="text-lg font-bold text-green-700">= {formatStat(stats.sensitivity)}</div>
+            <div className="text-sm font-mono text-green-800">= {displayValues.tp} / ({displayValues.tp} + {displayValues.fn}) = {displayValues.tp} / {displayValues.tp + displayValues.fn}</div>
+            <div className="text-lg font-bold text-green-700">= {formatStat(displayStats.sensitivity)}</div>
           </div>
-          <p className="mt-2 text-sm text-slate-600">
-            On the diagram, the <span style={{color:"#22c55e"}} className="font-semibold">green TP hemiaxis</span> (up) and the <span style={{color:"#ef4444"}} className="font-semibold">red FN hemiaxis</span> (down) are highlighted. Sensitivity is the green fraction of their combined length.
-          </p>
         </div>
 
         {/* Specificity section */}
@@ -100,16 +119,23 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
           </p>
           <div className="mt-3 bg-blue-50 rounded-lg p-3 space-y-2">
             <div className="text-sm font-mono text-blue-800">Specificity = TN / (TN + FP)</div>
-            <div className="text-sm font-mono text-blue-800">= {tn} / ({tn} + {fp}) = {tn} / {healthy}</div>
-            <div className="text-lg font-bold text-blue-700">= {formatStat(stats.specificity)}</div>
+            <div className="text-sm font-mono text-blue-800">= {displayValues.tn} / ({displayValues.tn} + {displayValues.fp}) = {displayValues.tn} / {displayValues.tn + displayValues.fp}</div>
+            <div className="text-lg font-bold text-blue-700">= {formatStat(displayStats.specificity)}</div>
           </div>
-          <p className="mt-2 text-sm text-slate-600">
-            On the diagram, the <span style={{color:"#3b82f6"}} className="font-semibold">blue TN hemiaxis</span> (right) and the <span style={{color:"#eab308"}} className="font-semibold">yellow FP hemiaxis</span> (left) are highlighted. Specificity is the blue fraction of their combined length.
-          </p>
         </div>
 
-        <hr className="border-slate-100" />
-        <InputPanel values={values} setValue={setValue} setValues={setValues} />
+        {showLowPrev && (
+          <div className="bg-slate-50 rounded-lg p-3 text-sm text-slate-600">
+            <strong>Notice:</strong> Sensitivity and specificity remain unchanged at 5% prevalence &mdash; only the box shape changes. The predictive values (see next lesson) change dramatically.
+          </div>
+        )}
+
+        {!showLowPrev && (
+          <>
+            <hr className="border-slate-100" />
+            <InputPanel values={values} setValue={setValue} setValues={setValues} />
+          </>
+        )}
       </div>
     </LessonLayout>
   );

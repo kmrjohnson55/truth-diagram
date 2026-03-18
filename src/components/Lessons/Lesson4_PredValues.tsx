@@ -54,11 +54,18 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
           </button>
         </div>
       }
+      values={values}
       diagram={
         <TruthDiagram
           values={showComparison ? lowPrevValues : values}
           onDrag={showComparison ? undefined : setValues}
           overlays={[activeView]}
+          belowDiagramText={
+            <>
+              <strong>Try it:</strong> Use the &quot;Low Prevalence Screening&quot; preset to see how PPV drops
+              even with a good test. Compare with &quot;PSA (Case-Control)&quot; for higher prevalence.
+            </>
+          }
         />
       }
     >
@@ -164,9 +171,6 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
           </>
         )}
 
-        <div className="text-xs text-slate-600 bg-slate-50 rounded-lg p-3">
-          <strong>Try it:</strong> Use the &quot;Low Prevalence Screening&quot; preset to see how PPV drops even with a good test. Then compare with the &quot;PSA (Case-Control)&quot; preset to see higher prevalence.
-        </div>
       </div>
     </LessonLayout>
   );

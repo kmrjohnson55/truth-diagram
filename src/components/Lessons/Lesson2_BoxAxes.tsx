@@ -32,7 +32,19 @@ export function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLesso
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
-      diagram={<TruthDiagram values={values} onDrag={setValues} />}
+      values={values}
+      diagram={
+        <TruthDiagram
+          values={values}
+          onDrag={setValues}
+          belowDiagramText={
+            <>
+              <strong>Try it:</strong> Drag the box to move it and watch the four quadrant values change.
+              Drag a corner to resize the box and see how prevalence changes.
+            </>
+          }
+        />
+      }
     >
       <div className="space-y-5">
         <div>
@@ -81,10 +93,6 @@ export function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLesso
 
         <hr className="border-slate-100" />
         <InputPanel values={values} setValue={setValue} setValues={setValues} />
-
-        <div className="text-xs text-slate-600 bg-slate-50 rounded-lg p-3">
-          <strong>Try it:</strong> Drag the box to move it around and watch how the four quadrant values change. Drag a corner to resize it and see how the box shape (prevalence) changes. The origin always stays inside.
-        </div>
       </div>
     </LessonLayout>
   );

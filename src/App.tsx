@@ -28,7 +28,7 @@ function Header() {
   return (
     <header className="bg-white border-b border-slate-200 px-6 py-3">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-xl font-bold text-slate-800">Truth Diagram</h1>
+        <h1 className="text-xl font-bold text-slate-800">Johnson Truth Diagram</h1>
         <p className="text-xs text-slate-600">
           Interactive 2&times;2 diagnostic testing visualization
         </p>
@@ -48,7 +48,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
 function App() {
   const { values, stats, setValues, setValue } = useDiagramState();
-  const [currentLesson, setCurrentLesson] = useState<number>(0); // 0 = home
+  const [currentLesson, setCurrentLesson] = useState<number>(-1); // -1 = introduction
 
   const goHome = () => setCurrentLesson(0);
   const goPrev = () => setCurrentLesson((n) => Math.max(1, n - 1));

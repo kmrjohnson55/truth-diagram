@@ -56,10 +56,10 @@ export function ExportButton({ values, lesson }: ExportPanelProps) {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors"
+        className="px-2.5 py-1.5 text-sm font-medium text-indigo-100 hover:text-white hover:bg-indigo-500 rounded-md transition-colors"
         title="Export diagram"
       >
-        {"\u2B07\uFE0F"} Export
+        Export
       </button>
 
       {open && (

@@ -9,6 +9,7 @@ import {
   thresholdFromSensitivity,
   computeAUC,
 } from "../../utils/trajectory";
+import { toSvg } from "../../utils/geometry";
 import { presets, generalPresets, clinicalPresets } from "../../utils/presets";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
 import type { LessonNavProps } from "./lessonTypes";
@@ -142,6 +143,15 @@ export function Lesson5_Trajectory({
   // AUC
   const auc = useMemo(() => computeAUC(trajectory), [trajectory]);
 
+  // Trajectory points for the truth diagram (upper-left corner path)
+  const trajectoryDiagramPoints = useMemo(() => {
+    return trajectory.map((p) => {
+      const tpVal = Math.round(p.sensitivity * diseased);
+      const fpVal = Math.round((1 - p.specificity) * healthy);
+      return { diagramX: -fpVal, diagramY: tpVal };
+    });
+  }, [trajectory, diseased, healthy]);
+
   return (
     <LessonLayout
       meta={{
@@ -164,11 +174,38 @@ export function Lesson5_Trajectory({
           </p>
         </div>
       }
+      values={values}
       diagram={
         <TruthDiagram
           values={sliderValues}
           onDrag={setValues}
           overlays={["sensitivity", "specificity"]}
+          renderExtraSvg={(layout) => {
+            const { centerX: cx, centerY: cy, scale: s } = layout;
+            // Draw trajectory curve (path of upper-left corner)
+            const pathD = trajectoryDiagramPoints
+              .map((p, i) => {
+                const svgPt = toSvg(p.diagramX, p.diagramY, cx, cy, s);
+                return `${i === 0 ? "M" : "L"}${svgPt.x.toFixed(1)},${svgPt.y.toFixed(1)}`;
+              })
+              .join(" ");
+            // Chance line: slope=1 through origin in the UL quadrant
+            const chanceStart = toSvg(0, 0, cx, cy, s);
+            const maxLen = Math.max(diseased, healthy);
+            const chanceEnd = toSvg(-maxLen, maxLen, cx, cy, s);
+            return (
+              <g>
+                {/* Chance line (worthless test) */}
+                <line
+                  x1={chanceStart.x} y1={chanceStart.y}
+                  x2={chanceEnd.x} y2={chanceEnd.y}
+                  stroke="#ef4444" strokeWidth={1.5} strokeDasharray="6 4" opacity={0.4}
+                />
+                {/* Test trajectory */}
+                <path d={pathD} fill="none" stroke="#eab308" strokeWidth={2.5} opacity={0.8} />
+              </g>
+            );
+          }}
         />
       }
     >

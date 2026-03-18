@@ -75,7 +75,7 @@ export function DiagonalOverlays({
             textAnchor="end"
             opacity={0.9}
           >
-            positive odds = {fmtSlope(postPosSlope)}
+            odds after + test = {fmtSlope(postPosSlope)}
           </text>
         </>
       )}
@@ -93,7 +93,7 @@ export function DiagonalOverlays({
             fontSize={10} fontWeight={600} fill="#0d9488"
             opacity={0.9}
           >
-            negative odds = {fmtSlope(postNegSlope)}
+            odds after − test = {fmtSlope(postNegSlope)}
           </text>
         </>
       )}
