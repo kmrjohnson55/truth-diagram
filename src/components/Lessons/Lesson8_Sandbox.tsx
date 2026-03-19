@@ -75,7 +75,7 @@ export function Lesson8_Sandbox({
   // Overlay toggle state
   const [activeOverlays, setActiveOverlays] = useState<OverlayType[]>([]);
   const [showDiagonals, setShowDiagonals] = useState(false);
-  const [showChiSquare, setShowChiSquare] = useState(false);
+  const [showChiSquare] = useState(false);
 
   const toggleOverlay = (ov: OverlayType) => {
     setActiveOverlays((prev) =>
