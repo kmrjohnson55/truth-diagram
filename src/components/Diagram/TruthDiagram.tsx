@@ -44,10 +44,14 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
 
   const computedLayout = fixedLayout || autoLayout;
 
+  // When fixedLayout is provided, always use it (axes never move).
+  // Otherwise, lock to dragStart during drag to prevent feedback loops.
   const { centerX, centerY, scale } =
-    dragMode && dragStart.current
-      ? dragStart.current
-      : computedLayout;
+    fixedLayout
+      ? fixedLayout
+      : dragMode && dragStart.current
+        ? dragStart.current
+        : computedLayout;
 
   const getSvgPoint = useCallback(
     (e: React.MouseEvent | MouseEvent) => {
