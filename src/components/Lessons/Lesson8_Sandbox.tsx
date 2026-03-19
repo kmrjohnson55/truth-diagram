@@ -172,12 +172,6 @@ export function Lesson8_Sandbox({
               color="#64748b"
               onClick={() => setShowDiagonals(!showDiagonals)}
             />
-            <OverlayToggle
-              label="Chi-Square"
-              active={showChiSquare}
-              color="#4f46e5"
-              onClick={() => setShowChiSquare(!showChiSquare)}
-            />
           </div>
         </div>
 

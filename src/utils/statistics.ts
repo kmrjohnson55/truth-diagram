@@ -29,11 +29,11 @@ export function computeStats(v: CellValues): DiagnosticStats {
   const testPos = tp + fp;
   const testNeg = fn + tn;
 
-  const sensitivity = diseased > 0 ? tp / diseased : 0;
-  const specificity = healthy > 0 ? tn / healthy : 0;
-  const ppv = testPos > 0 ? tp / testPos : 0;
-  const npv = testNeg > 0 ? tn / testNeg : 0;
-  const accuracy = total > 0 ? (tp + tn) / total : 0;
+  const sensitivity = diseased > 0 ? tp / diseased : NaN;
+  const specificity = healthy > 0 ? tn / healthy : NaN;
+  const ppv = testPos > 0 ? tp / testPos : NaN;
+  const npv = testNeg > 0 ? tn / testNeg : NaN;
+  const accuracy = total > 0 ? (tp + tn) / total : NaN;
   const prevalence = total > 0 ? diseased / total : 0;
 
   const positiveLR =
@@ -64,11 +64,13 @@ export function computeStats(v: CellValues): DiagnosticStats {
 }
 
 export function formatStat(value: number, decimals = 1): string {
+  if (isNaN(value)) return "N/A";
   if (!isFinite(value)) return "\u221E";
   return (value * 100).toFixed(decimals) + "%";
 }
 
 export function formatRatio(value: number, decimals = 2): string {
+  if (isNaN(value)) return "N/A";
   if (!isFinite(value)) return "\u221E";
   return value.toFixed(decimals);
 }

@@ -58,12 +58,12 @@ export function InputPanel({ values, setValue, setValues }: InputPanelProps) {
             const preset = presets[parseInt(e.target.value)];
             if (preset) setValues(preset.values);
           }}
-          defaultValue=""
+          value=""
           className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md
             focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent
             bg-white text-slate-800"
         >
-          <option value="" disabled>
+          <option value="">
             Load a preset...
           </option>
           <optgroup label="General Examples">

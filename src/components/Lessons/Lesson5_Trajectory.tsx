@@ -162,7 +162,7 @@ export function Lesson5_Trajectory({
         </div>
       }
       values={values}
-      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
+      diagramFooter={<TwoByTwoTable values={sliderValues} setValue={setValue} setValues={setValues} />}
       diagram={
         <TruthDiagram
           values={sliderValues}
