@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
-import { formatStat, formatRatio, computeStats } from "../../utils/statistics";
+import { formatStat, formatRatio, computeStats, computeExpectedValues, computeChiSquare } from "../../utils/statistics";
 import { computeLayout, toSvg } from "../../utils/geometry";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
 import type { LessonNavProps } from "./lessonTypes";
@@ -15,12 +15,8 @@ interface CompareProps extends LessonNavProps {
 
 interface ComparisonPreset {
   name: string;
-  diseased: number;
-  healthy: number;
-  sensA: number;
-  specA: number;
-  sensB: number;
-  specB: number;
+  valuesA: CellValues;
+  valuesB: CellValues;
   labelA: string;
   labelB: string;
 }
@@ -28,31 +24,26 @@ interface ComparisonPreset {
 const COMPARISON_PRESETS: ComparisonPreset[] = [
   {
     name: "NLST: CT vs Radiography (Lung Cancer)",
-    diseased: 406, healthy: 25836,
-    sensA: 0.67, specA: 0.73, sensB: 0.43, specB: 0.91,
-    labelA: "Low-dose CT", labelB: "Chest Radiography",
+    valuesA: { tp: 270, fp: 6911, fn: 136, tn: 18925 },
+    valuesB: { tp: 175, fp: 2325, fn: 231, tn: 23511 },
+    labelA: "Low-dose CT",
+    labelB: "Chest Radiography",
   },
   {
     name: "High Sens vs High Spec (Generic)",
-    diseased: 100, healthy: 100,
-    sensA: 0.95, specA: 0.60, sensB: 0.60, specB: 0.95,
-    labelA: "High Sensitivity Test", labelB: "High Specificity Test",
+    valuesA: { tp: 95, fp: 40, fn: 5, tn: 60 },
+    valuesB: { tp: 60, fp: 5, fn: 40, tn: 95 },
+    labelA: "High Sensitivity Test",
+    labelB: "High Specificity Test",
   },
   {
     name: "Good Test vs Mediocre Test",
-    diseased: 100, healthy: 100,
-    sensA: 0.90, specA: 0.90, sensB: 0.70, specB: 0.70,
-    labelA: "Good Test", labelB: "Mediocre Test",
+    valuesA: { tp: 90, fp: 10, fn: 10, tn: 90 },
+    valuesB: { tp: 70, fp: 30, fn: 30, tn: 70 },
+    labelA: "Good Test",
+    labelB: "Mediocre Test",
   },
 ];
-
-function computeFromSensSpec(sens: number, spec: number, diseased: number, healthy: number): CellValues {
-  const tp = Math.round(sens * diseased);
-  const fn = diseased - tp;
-  const tn = Math.round(spec * healthy);
-  const fp = healthy - tn;
-  return { tp, fp, fn, tn };
-}
 
 /* ─── Draggable second box ─── */
 
@@ -61,12 +52,10 @@ function DraggableSecondBox({
 }: {
   values: CellValues; centerX: number; centerY: number; scale: number;
   color: string; label: string;
-  onDrag: (newSens: number, newSpec: number) => void;
+  onDrag: (newValues: CellValues) => void;
 }) {
   const isDragging = useRef(false);
-  const startRef = useRef<{ x: number; y: number; tp: number; tn: number } | null>(null);
-  const diseased = values.tp + values.fn;
-  const healthy = values.fp + values.tn;
+  const startRef = useRef<{ x: number; y: number; values: CellValues } | null>(null);
 
   const ul = toSvg(-values.fp, values.tp, centerX, centerY, scale);
   const ur = toSvg(values.tn, values.tp, centerX, centerY, scale);
@@ -87,7 +76,10 @@ function DraggableSecondBox({
     e.preventDefault();
     isDragging.current = true;
     const pt = getSvgPt(e);
-    startRef.current = { x: pt.x, y: pt.y, tp: values.tp, tn: values.tn };
+    startRef.current = { x: pt.x, y: pt.y, values: { ...values } };
+
+    const diseased = values.tp + values.fn;
+    const healthy = values.fp + values.tn;
 
     const handleMove = (me: MouseEvent) => {
       if (!isDragging.current || !startRef.current) return;
@@ -96,9 +88,12 @@ function DraggableSecondBox({
       const dy = pt2.y - startRef.current.y;
       const dY = -dy / scale;
       const dX = dx / scale;
-      const newTp = Math.max(0, Math.min(diseased, Math.round(startRef.current.tp + dY)));
-      const newTn = Math.max(0, Math.min(healthy, Math.round(startRef.current.tn + dX)));
-      onDrag(diseased > 0 ? newTp / diseased : 0, healthy > 0 ? newTn / healthy : 0);
+      const orig = startRef.current.values;
+      const newTp = Math.max(0, Math.min(diseased, Math.round(orig.tp + dY)));
+      const newFn = diseased - newTp;
+      const newTn = Math.max(0, Math.min(healthy, Math.round(orig.tn + dX)));
+      const newFp = healthy - newTn;
+      onDrag({ tp: newTp, fp: newFp, fn: newFn, tn: newTn });
     };
 
     const handleUp = () => {
@@ -110,7 +105,7 @@ function DraggableSecondBox({
 
     window.addEventListener("mousemove", handleMove);
     window.addEventListener("mouseup", handleUp);
-  }, [getSvgPt, values.tp, values.tn, diseased, healthy, scale, onDrag]);
+  }, [getSvgPt, values, scale, onDrag]);
 
   return (
     <g>
@@ -121,10 +116,99 @@ function DraggableSecondBox({
   );
 }
 
+/* ─── Editable 2×2 table for compare ─── */
+
+function EditableCompactTable({
+  values, color, label, onChange, stats,
+}: {
+  values: CellValues; color: string; label: string;
+  onChange: (key: keyof CellValues, val: number) => void;
+  stats: DiagnosticStats;
+}) {
+  const { tp, fp, fn, tn } = values;
+  const inputClass = "w-14 px-1 py-0.5 text-xs font-bold rounded text-center border";
+  return (
+    <div className="rounded-lg border p-2" style={{ borderColor: color + "40" }}>
+      <div className="text-xs font-semibold mb-1" style={{ color }}>{label}</div>
+      <table className="w-full text-xs border-collapse">
+        <thead><tr><th className="p-0.5"></th><th className="p-0.5 text-center text-slate-600">D+</th><th className="p-0.5 text-center text-slate-600">D−</th></tr></thead>
+        <tbody>
+          <tr>
+            <td className="p-0.5 text-slate-600 border-r border-slate-200">T+</td>
+            <td className="p-0.5 text-center">
+              <input type="number" min={0} value={tp} onChange={(e) => onChange("tp", parseInt(e.target.value) || 0)}
+                className={`${inputClass} text-green-700 bg-green-50 border-green-200`} />
+            </td>
+            <td className="p-0.5 text-center">
+              <input type="number" min={0} value={fp} onChange={(e) => onChange("fp", parseInt(e.target.value) || 0)}
+                className={`${inputClass} text-yellow-700 bg-yellow-50 border-yellow-200`} />
+            </td>
+          </tr>
+          <tr>
+            <td className="p-0.5 text-slate-600 border-r border-slate-200">T−</td>
+            <td className="p-0.5 text-center">
+              <input type="number" min={0} value={fn} onChange={(e) => onChange("fn", parseInt(e.target.value) || 0)}
+                className={`${inputClass} text-red-700 bg-red-50 border-red-200`} />
+            </td>
+            <td className="p-0.5 text-center">
+              <input type="number" min={0} value={tn} onChange={(e) => onChange("tn", parseInt(e.target.value) || 0)}
+                className={`${inputClass} text-blue-700 bg-blue-50 border-blue-200`} />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div className="mt-1 text-xs text-slate-600 space-y-0.5">
+        <div>Sens: <strong>{formatStat(stats.sensitivity)}</strong> &nbsp; Spec: <strong>{formatStat(stats.specificity)}</strong></div>
+        <div>N = {tp + fp + fn + tn} &nbsp; Prevalence: {formatStat(stats.prevalence)}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Advanced comparison statistics ─── */
+
+function youdenIndex(stats: DiagnosticStats): number {
+  if (isNaN(stats.sensitivity) || isNaN(stats.specificity)) return NaN;
+  return stats.sensitivity + stats.specificity - 1;
+}
+
+function diagnosticOddsRatio(v: CellValues): number {
+  if (v.fp * v.fn === 0) return Infinity;
+  return (v.tp * v.tn) / (v.fp * v.fn);
+}
+
+/**
+ * Net Reclassification Improvement: how much does Test B improve over Test A?
+ * NRI = (sensB - sensA) + (specB - specA)
+ * Positive means B is better overall.
+ */
+function netReclassificationImprovement(sA: DiagnosticStats, sB: DiagnosticStats): number {
+  if (isNaN(sA.sensitivity) || isNaN(sB.sensitivity)) return NaN;
+  return (sB.sensitivity - sA.sensitivity) + (sB.specificity - sA.specificity);
+}
+
 /* ─── Stat comparison row ─── */
 
-function CompareRow({ label, valueA, valueB, betterHigher = true }: {
-  label: string; valueA: string; valueB: string; betterHigher?: boolean;
+function TooltipDot({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="relative ml-1 inline-block">
+      <span
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        className="inline-flex items-center justify-center w-3.5 h-3.5 text-[9px] font-bold text-slate-400 bg-slate-100 rounded-full cursor-help select-none"
+      >?</span>
+      {show && (
+        <span className="absolute left-5 top-1/2 -translate-y-1/2 z-50 w-52 px-2 py-1.5 text-xs text-white bg-slate-800 rounded-md shadow-lg leading-relaxed whitespace-normal">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function CompareRow({ label, valueA, valueB, betterHigher = true, tooltip }: {
+  label: string; valueA: string; valueB: string; betterHigher?: boolean; tooltip?: string;
 }) {
   const numA = parseFloat(valueA);
   const numB = parseFloat(valueB);
@@ -132,28 +216,13 @@ function CompareRow({ label, valueA, valueB, betterHigher = true }: {
   const bWins = betterHigher ? numB > numA : numB < numA;
   return (
     <tr className="border-t border-slate-100">
-      <td className="py-1.5 px-2 text-xs font-medium text-slate-700">{label}</td>
+      <td className="py-1.5 px-2 text-xs font-medium text-slate-700">
+        {label}
+        {tooltip && <TooltipDot text={tooltip} />}
+      </td>
       <td className={`py-1.5 px-2 text-xs text-center font-semibold tabular-nums ${aWins ? "text-blue-700 bg-blue-50" : "text-slate-600"}`}>{valueA}</td>
       <td className={`py-1.5 px-2 text-xs text-center font-semibold tabular-nums ${bWins ? "text-orange-700 bg-orange-50" : "text-slate-600"}`}>{valueB}</td>
     </tr>
-  );
-}
-
-/* ─── Compact 2×2 table ─── */
-
-function CompactTable({ values, color, label }: { values: CellValues; color: string; label: string }) {
-  const { tp, fp, fn, tn } = values;
-  return (
-    <div className="rounded-lg border p-2" style={{ borderColor: color + "40" }}>
-      <div className="text-xs font-semibold mb-1" style={{ color }}>{label}</div>
-      <table className="w-full text-xs border-collapse">
-        <thead><tr><th className="p-1"></th><th className="p-1 text-center text-slate-600">D+</th><th className="p-1 text-center text-slate-600">D−</th></tr></thead>
-        <tbody>
-          <tr><td className="p-1 text-slate-600 border-r border-slate-200">T+</td><td className="p-1 text-center font-bold text-green-700">{tp}</td><td className="p-1 text-center font-bold text-yellow-700">{fp}</td></tr>
-          <tr><td className="p-1 text-slate-600 border-r border-slate-200">T−</td><td className="p-1 text-center font-bold text-red-700">{fn}</td><td className="p-1 text-center font-bold text-blue-700">{tn}</td></tr>
-        </tbody>
-      </table>
-    </div>
   );
 }
 
@@ -166,52 +235,115 @@ export function Lesson9_Compare({
   setValues: _setValues,
   totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles,
 }: CompareProps) {
-  const [diseased, setDiseased] = useState(values.tp + values.fn || 100);
-  const [healthy, setHealthy] = useState(values.fp + values.tn || 100);
-  const [sensA, setSensA] = useState(0.80);
-  const [specA, setSpecA] = useState(0.80);
-  const [sensB, setSensB] = useState(0.60);
-  const [specB, setSpecB] = useState(0.90);
+  // Test A initializes from the shared app values
+  const [valuesA, setValuesA] = useState<CellValues>(() => ({ ...values }));
+  // Test B: same proportions but different position (~60% sens, ~90% spec)
+  const [valuesB, setValuesB] = useState<CellValues>(() => {
+    const diseased = values.tp + values.fn;
+    const healthy = values.fp + values.tn;
+    const tpB = Math.round(0.6 * diseased);
+    const tnB = Math.round(0.9 * healthy);
+    return { tp: tpB, fp: healthy - tnB, fn: diseased - tpB, tn: tnB };
+  });
+  const [sameProportions, setSameProportions] = useState(true);
   const [labelA, setLabelA] = useState("Test A");
   const [labelB, setLabelB] = useState("Test B");
 
-  const valuesA = useMemo(() => computeFromSensSpec(sensA, specA, diseased, healthy), [sensA, specA, diseased, healthy]);
-  const valuesB = useMemo(() => computeFromSensSpec(sensB, specB, diseased, healthy), [sensB, specB, diseased, healthy]);
   const statsA = useMemo(() => computeStats(valuesA), [valuesA]);
   const statsB = useMemo(() => computeStats(valuesB), [valuesB]);
 
-  // Fixed layout — covers full range for both boxes
-  const fixedLayout = useMemo(() => {
-    const maxValues: CellValues = { tp: diseased, fp: healthy, fn: diseased, tn: healthy };
-    return computeLayout(maxValues, 560, 500, 85);
-  }, [diseased, healthy]);
+  // When same proportions: editing Test A's cells updates Test B to match population
+  const handleChangeA = useCallback((key: keyof CellValues, val: number) => {
+    setValuesA((prev) => {
+      const next = { ...prev, [key]: val };
+      if (sameProportions) {
+        // Recalculate Test B for the new population
+        const newDiseased = next.tp + next.fn;
+        const newHealthy = next.fp + next.tn;
+        const oldDiseased = valuesB.tp + valuesB.fn;
+        const oldHealthy = valuesB.fp + valuesB.tn;
+        if (newDiseased !== oldDiseased || newHealthy !== oldHealthy) {
+          const sensB = oldDiseased > 0 ? valuesB.tp / oldDiseased : 0;
+          const specB = oldHealthy > 0 ? valuesB.tn / oldHealthy : 0;
+          const newTpB = Math.round(sensB * newDiseased);
+          const newTnB = Math.round(specB * newHealthy);
+          setValuesB({ tp: newTpB, fp: newHealthy - newTnB, fn: newDiseased - newTpB, tn: newTnB });
+        }
+      }
+      return next;
+    });
+  }, [sameProportions, valuesB]);
 
-  // Drag Test A box: update sensA/specA. Corner drags also update population.
+  const handleChangeB = useCallback((key: keyof CellValues, val: number) => {
+    setValuesB((prev) => {
+      const next = { ...prev, [key]: val };
+      if (sameProportions) {
+        // Recalculate Test A for the new population
+        const newDiseased = next.tp + next.fn;
+        const newHealthy = next.fp + next.tn;
+        const oldDiseased = valuesA.tp + valuesA.fn;
+        const oldHealthy = valuesA.fp + valuesA.tn;
+        if (newDiseased !== oldDiseased || newHealthy !== oldHealthy) {
+          const sensA = oldDiseased > 0 ? valuesA.tp / oldDiseased : 0;
+          const specA = oldHealthy > 0 ? valuesA.tn / oldHealthy : 0;
+          const newTpA = Math.round(sensA * newDiseased);
+          const newTnA = Math.round(specA * newHealthy);
+          setValuesA({ tp: newTpA, fp: newHealthy - newTnA, fn: newDiseased - newTpA, tn: newTnA });
+        }
+      }
+      return next;
+    });
+  }, [sameProportions, valuesA]);
+
+  // Drag handlers
   const handleDragA = useCallback((newValues: CellValues) => {
-    const d = newValues.tp + newValues.fn;
-    const h = newValues.fp + newValues.tn;
-    // Corner drag changes population
-    if (d !== diseased || h !== healthy) {
-      setDiseased(d);
-      setHealthy(h);
+    setValuesA(newValues);
+    if (sameProportions) {
+      const d = newValues.tp + newValues.fn;
+      const h = newValues.fp + newValues.tn;
+      const oldD = valuesB.tp + valuesB.fn;
+      const oldH = valuesB.fp + valuesB.tn;
+      if (d !== oldD || h !== oldH) {
+        const sensB = oldD > 0 ? valuesB.tp / oldD : 0;
+        const specB = oldH > 0 ? valuesB.tn / oldH : 0;
+        setValuesB({ tp: Math.round(sensB * d), fp: h - Math.round(specB * h), fn: d - Math.round(sensB * d), tn: Math.round(specB * h) });
+      }
     }
-    if (d > 0) setSensA(newValues.tp / d);
-    if (h > 0) setSpecA(newValues.tn / h);
-  }, [diseased, healthy]);
+  }, [sameProportions, valuesB]);
 
-  // Drag Test B box
-  const handleDragB = useCallback((newSens: number, newSpec: number) => {
-    setSensB(newSens);
-    setSpecB(newSpec);
-  }, []);
+  const handleDragB = useCallback((newValues: CellValues) => {
+    setValuesB(newValues);
+    if (sameProportions) {
+      const d = newValues.tp + newValues.fn;
+      const h = newValues.fp + newValues.tn;
+      const oldD = valuesA.tp + valuesA.fn;
+      const oldH = valuesA.fp + valuesA.tn;
+      if (d !== oldD || h !== oldH) {
+        const sensA = oldD > 0 ? valuesA.tp / oldD : 0;
+        const specA = oldH > 0 ? valuesA.tn / oldH : 0;
+        setValuesA({ tp: Math.round(sensA * d), fp: h - Math.round(specA * h), fn: d - Math.round(sensA * d), tn: Math.round(specA * h) });
+      }
+    }
+  }, [sameProportions, valuesA]);
+
+  // Tight zoom: fit closely around both boxes
+  const fixedLayout = useMemo(() => {
+    const maxValues: CellValues = {
+      tp: Math.max(valuesA.tp, valuesB.tp),
+      fp: Math.max(valuesA.fp, valuesB.fp),
+      fn: Math.max(valuesA.fn, valuesB.fn),
+      tn: Math.max(valuesA.tn, valuesB.tn),
+    };
+    return computeLayout(maxValues, 560, 500, 65);
+  }, [valuesA, valuesB]);
 
   const loadPreset = (idx: number) => {
     const p = COMPARISON_PRESETS[idx];
     if (!p) return;
-    setDiseased(p.diseased); setHealthy(p.healthy);
-    setSensA(p.sensA); setSpecA(p.specA);
-    setSensB(p.sensB); setSpecB(p.specB);
-    setLabelA(p.labelA); setLabelB(p.labelB);
+    setValuesA(p.valuesA);
+    setValuesB(p.valuesB);
+    setLabelA(p.labelA);
+    setLabelB(p.labelB);
   };
 
   return (
@@ -221,9 +353,16 @@ export function Lesson9_Compare({
       lessonTitles={lessonTitles} values={valuesA}
       diagramFooter={
         <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs text-slate-600">
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" checked={sameProportions} onChange={(e) => setSameProportions(e.target.checked)}
+                className="accent-indigo-500" />
+              Same population proportions
+            </label>
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <CompactTable values={valuesA} color="#2563eb" label={labelA} />
-            <CompactTable values={valuesB} color="#ea580c" label={labelB} />
+            <EditableCompactTable values={valuesA} color="#2563eb" label={labelA} onChange={handleChangeA} stats={statsA} />
+            <EditableCompactTable values={valuesB} color="#ea580c" label={labelB} onChange={handleChangeB} stats={statsB} />
           </div>
           <select value="" onChange={(e) => loadPreset(parseInt(e.target.value))}
             className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md bg-white text-slate-800">
@@ -235,7 +374,11 @@ export function Lesson9_Compare({
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
-            <strong>Key insight:</strong> Two tests applied to the same population produce different box positions. Both boxes have the same shape (same prevalence) but different positions. Drag either box to explore; drag a corner to resize both.
+            <strong>Key insight:</strong> Two tests applied to the same population produce different box positions.
+            {sameProportions
+              ? " Both boxes have the same shape (same prevalence) but different positions."
+              : " When proportions differ, box shapes also differ — compare with care."}
+            {" "}Drag either box to explore.
           </p>
         </div>
       }
@@ -245,6 +388,12 @@ export function Lesson9_Compare({
           onDrag={handleDragA}
           overlays={[]}
           fixedLayout={fixedLayout}
+          axisExtent={{
+            tp: Math.max(valuesA.tp, valuesB.tp),
+            fp: Math.max(valuesA.fp, valuesB.fp),
+            fn: Math.max(valuesA.fn, valuesB.fn),
+            tn: Math.max(valuesA.tn, valuesB.tn),
+          }}
           renderExtraSvg={(layout) => (
             <g>
               <text
@@ -260,43 +409,30 @@ export function Lesson9_Compare({
             <>
               <strong style={{ color: "#2563eb" }}>{labelA}</strong> (blue) vs{" "}
               <strong style={{ color: "#ea580c" }}>{labelB}</strong> (orange)
-              — drag either box to move it. Drag a corner to resize both.
+              — drag either box to move it.
+              {sameProportions && " Both boxes share the same population."}
             </>
           }
         />
       }
     >
       <div className="space-y-4">
+        {/* Test names */}
         <div>
-          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Shared Population</h3>
+          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Test Names</h3>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="text-xs text-slate-600">Diseased</label>
-              <input type="number" min={1} value={diseased} onChange={(e) => setDiseased(parseInt(e.target.value) || 1)}
-                className="w-full px-2 py-1 text-sm border border-slate-200 rounded text-center" /></div>
-            <div><label className="text-xs text-slate-600">Healthy</label>
-              <input type="number" min={1} value={healthy} onChange={(e) => setHealthy(parseInt(e.target.value) || 1)}
-                className="w-full px-2 py-1 text-sm border border-slate-200 rounded text-center" /></div>
+            <input type="text" value={labelA} onChange={(e) => setLabelA(e.target.value || "Test A")}
+              className="px-2 py-1 text-xs border border-blue-200 rounded bg-blue-50 text-blue-700 font-semibold" />
+            <input type="text" value={labelB} onChange={(e) => setLabelB(e.target.value || "Test B")}
+              className="px-2 py-1 text-xs border border-orange-200 rounded bg-orange-50 text-orange-700 font-semibold" />
           </div>
         </div>
 
-        <div className="bg-blue-50 rounded-lg p-3 space-y-2">
-          <h3 className="text-xs font-semibold text-blue-700 uppercase">{labelA}</h3>
-          <div><label className="text-xs text-blue-600">Sensitivity: {(sensA * 100).toFixed(0)}%</label>
-            <input type="range" min={0} max={100} value={Math.round(sensA * 100)} onChange={(e) => setSensA(parseInt(e.target.value) / 100)} className="w-full accent-blue-500" /></div>
-          <div><label className="text-xs text-blue-600">Specificity: {(specA * 100).toFixed(0)}%</label>
-            <input type="range" min={0} max={100} value={Math.round(specA * 100)} onChange={(e) => setSpecA(parseInt(e.target.value) / 100)} className="w-full accent-blue-500" /></div>
-        </div>
-
-        <div className="bg-orange-50 rounded-lg p-3 space-y-2">
-          <h3 className="text-xs font-semibold text-orange-700 uppercase">{labelB}</h3>
-          <div><label className="text-xs text-orange-600">Sensitivity: {(sensB * 100).toFixed(0)}%</label>
-            <input type="range" min={0} max={100} value={Math.round(sensB * 100)} onChange={(e) => setSensB(parseInt(e.target.value) / 100)} className="w-full accent-orange-500" /></div>
-          <div><label className="text-xs text-orange-600">Specificity: {(specB * 100).toFixed(0)}%</label>
-            <input type="range" min={0} max={100} value={Math.round(specB * 100)} onChange={(e) => setSpecB(parseInt(e.target.value) / 100)} className="w-full accent-orange-500" /></div>
-        </div>
-
+        {/* Basic comparison table */}
         <div>
-          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Head-to-Head Comparison</h3>
+          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+            Basic Statistics
+          </h3>
           <div className="bg-slate-50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead><tr className="bg-slate-100">
@@ -305,16 +441,54 @@ export function Lesson9_Compare({
                 <th className="py-1.5 px-2 text-center text-xs font-semibold text-orange-700">{labelB}</th>
               </tr></thead>
               <tbody>
-                <CompareRow label="Sensitivity" valueA={formatStat(statsA.sensitivity)} valueB={formatStat(statsB.sensitivity)} />
-                <CompareRow label="Specificity" valueA={formatStat(statsA.specificity)} valueB={formatStat(statsB.specificity)} />
-                <CompareRow label="PPV" valueA={formatStat(statsA.ppv)} valueB={formatStat(statsB.ppv)} />
-                <CompareRow label="NPV" valueA={formatStat(statsA.npv)} valueB={formatStat(statsB.npv)} />
-                <CompareRow label="Accuracy" valueA={formatStat(statsA.accuracy)} valueB={formatStat(statsB.accuracy)} />
-                <CompareRow label="Positive LR" valueA={formatRatio(statsA.positiveLR)} valueB={formatRatio(statsB.positiveLR)} />
-                <CompareRow label="Negative LR" valueA={formatRatio(statsA.negativeLR)} valueB={formatRatio(statsB.negativeLR)} betterHigher={false} />
+                <CompareRow label="Sensitivity" valueA={formatStat(statsA.sensitivity)} valueB={formatStat(statsB.sensitivity)} tooltip="Proportion of diseased subjects correctly identified. Higher is better." />
+                <CompareRow label="Specificity" valueA={formatStat(statsA.specificity)} valueB={formatStat(statsB.specificity)} tooltip="Proportion of healthy subjects correctly identified. Higher is better." />
+                <CompareRow label="PPV" valueA={formatStat(statsA.ppv)} valueB={formatStat(statsB.ppv)} tooltip="Positive Predictive Value: probability of disease given a positive test. Depends on prevalence." />
+                <CompareRow label="NPV" valueA={formatStat(statsA.npv)} valueB={formatStat(statsB.npv)} tooltip="Negative Predictive Value: probability of health given a negative test. Depends on prevalence." />
+                <CompareRow label="Accuracy" valueA={formatStat(statsA.accuracy)} valueB={formatStat(statsB.accuracy)} tooltip="Proportion of all subjects correctly classified: (TP+TN)/Total." />
+                <CompareRow label="Prevalence" valueA={formatStat(statsA.prevalence)} valueB={formatStat(statsB.prevalence)} tooltip="Proportion of subjects with disease: (TP+FN)/Total." />
+                <CompareRow label="Positive LR" valueA={formatRatio(statsA.positiveLR)} valueB={formatRatio(statsB.positiveLR)} tooltip="How much a positive result increases the odds of disease. >10 is strong." />
+                <CompareRow label="Negative LR" valueA={formatRatio(statsA.negativeLR)} valueB={formatRatio(statsB.negativeLR)} betterHigher={false} tooltip="How much a negative result decreases the odds of disease. <0.1 is strong." />
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Advanced comparison statistics */}
+        <div>
+          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+            Global Comparison
+          </h3>
+          <div className="bg-slate-50 rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead><tr className="bg-slate-100">
+                <th className="py-1.5 px-2 text-left text-xs text-slate-600"></th>
+                <th className="py-1.5 px-2 text-center text-xs font-semibold text-blue-700">{labelA}</th>
+                <th className="py-1.5 px-2 text-center text-xs font-semibold text-orange-700">{labelB}</th>
+              </tr></thead>
+              <tbody>
+                <CompareRow label="Youden's Index (J)" valueA={formatRatio(youdenIndex(statsA))} valueB={formatRatio(youdenIndex(statsB))} tooltip="Sensitivity + Specificity − 1. Range 0 (worthless) to 1 (perfect). 0.5 = moderate, 0.8+ = good." />
+                <CompareRow label="Diagnostic OR" valueA={formatRatio(diagnosticOddsRatio(valuesA))} valueB={formatRatio(diagnosticOddsRatio(valuesB))} tooltip="(TP×TN)/(FP×FN). Ratio of odds of positive result in diseased vs healthy. 1 = worthless, 10 = moderate, 100+ = strong." />
+                <CompareRow label="Chi-Square" valueA={formatRatio((() => { const e = computeExpectedValues(valuesA); return computeChiSquare(valuesA, e); })())} valueB={formatRatio((() => { const e = computeExpectedValues(valuesB); return computeChiSquare(valuesB, e); })())} tooltip="Tests whether the test discriminates better than chance. ≥3.84 = significant (p<0.05), ≥6.63 = p<0.01." />
+              </tbody>
+            </table>
+          </div>
+
+          {/* NRI */}
+          {(() => {
+            const nri = netReclassificationImprovement(statsA, statsB);
+            return (
+              <div className="mt-2 bg-indigo-50 rounded-lg p-2 text-xs text-indigo-800">
+                <strong>NRI ({labelB} vs {labelA}):</strong>
+                <TooltipDot text="Net Reclassification Improvement = (SensB−SensA) + (SpecB−SpecA). Positive means B improves overall classification." />{" "}
+                {isNaN(nri) ? "N/A" : (nri > 0 ? "+" : "") + (nri * 100).toFixed(1) + "%"}
+                <span className="text-indigo-600 ml-1">
+                  {isNaN(nri) ? "" : nri > 0 ? `(${labelB} improves classification)` : nri < 0 ? `(${labelA} is better)` : "(no difference)"}
+                </span>
+              </div>
+            );
+          })()}
+
         </div>
       </div>
     </LessonLayout>

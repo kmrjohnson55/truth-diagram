@@ -19,6 +19,8 @@ interface TruthDiagramProps {
   extraMargin?: number;
   /** Fixed layout overrides auto-computed layout. Axes stay put while box moves. */
   fixedLayout?: { centerX: number; centerY: number; scale: number };
+  /** Max cell values for axis length (e.g., to cover both boxes on Compare screen) */
+  axisExtent?: CellValues;
 }
 
 const SVG_WIDTH = 560;
@@ -28,7 +30,7 @@ const CORNER_HIT_RADIUS = 12;
 
 type DragMode = "box" | "corner-ul" | "corner-ur" | "corner-ll" | "corner-lr" | null;
 
-export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText, extraMargin = 0, fixedLayout }: TruthDiagramProps) {
+export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText, extraMargin = 0, fixedLayout, axisExtent }: TruthDiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const dragStart = useRef<{
@@ -234,7 +236,7 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
           centerX={centerX}
           centerY={centerY}
           scale={scale}
-          values={values}
+          values={axisExtent || values}
         />
 
         {/* Corner handles */}
