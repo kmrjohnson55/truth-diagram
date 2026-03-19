@@ -12,12 +12,30 @@ interface AxesProps {
   centerY: number;
   scale: number;
   values: CellValues;
+  /** Original (unmagnified) values for tick mark computation */
+  tickValues?: CellValues;
 }
 
-const TICK_INTERVAL = 10;
 const TICK_HALF = 4; // px each side of the axis
+const MIN_TICK_PX = 15; // minimum pixels between ticks
 
-export function Axes({ centerX, centerY, scale, values }: AxesProps) {
+const NICE_NUMBERS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+
+function niceInterval(rawInterval: number): number {
+  return NICE_NUMBERS.find(n => n >= rawInterval) || Math.ceil(rawInterval / 1000) * 1000;
+}
+
+export function Axes({ centerX, centerY, scale, values, tickValues }: AxesProps) {
+  // Use tickValues for tick computation (unmagnified), values for axis length
+  const tv = tickValues || values;
+
+  // Vertical magnification ratio (TP/FN are magnified on screen)
+  const magRatioV = tv.tp > 0 ? values.tp / tv.tp : (tv.fn > 0 ? values.fn / tv.fn : 1);
+
+  // Separate tick intervals for horizontal and vertical axes
+  const TICK_INTERVAL_H = niceInterval(MIN_TICK_PX / scale);
+  const TICK_INTERVAL_V = niceInterval(MIN_TICK_PX / (scale * Math.max(magRatioV, 1)));
+
   const arrowSize = 7;
   const axisOvershoot = Math.max(20, scale * 5);
 
@@ -30,29 +48,31 @@ export function Axes({ centerX, centerY, scale, values }: AxesProps) {
   const tickColor = "#cbd5e1";
   const labelColor = "#374151";
 
-  // Generate tick marks for a given axis direction
+  // Generate tick marks for each axis direction
   const ticks: React.ReactElement[] = [];
 
-  // Up (TP) — ticks are horizontal dashes along the vertical axis
-  for (let n = TICK_INTERVAL; n <= values.tp; n += TICK_INTERVAL) {
-    const y = centerY - n * scale;
+  // Up (TP) — vertical axis ticks (use TICK_INTERVAL_V)
+  for (let n = TICK_INTERVAL_V; n <= tv.tp; n += TICK_INTERVAL_V) {
+    const magRatio = tv.tp > 0 ? values.tp / tv.tp : 1;
+    const y = centerY - n * magRatio * scale;
     ticks.push(
       <line key={`tp-${n}`} x1={centerX - TICK_HALF} y1={y} x2={centerX + TICK_HALF} y2={y}
         stroke={tickColor} strokeWidth={1} />
     );
   }
 
-  // Down (FN) — ticks are horizontal dashes
-  for (let n = TICK_INTERVAL; n <= values.fn; n += TICK_INTERVAL) {
-    const y = centerY + n * scale;
+  // Down (FN) — vertical axis ticks (use TICK_INTERVAL_V)
+  for (let n = TICK_INTERVAL_V; n <= tv.fn; n += TICK_INTERVAL_V) {
+    const magRatio = tv.fn > 0 ? values.fn / tv.fn : 1;
+    const y = centerY + n * magRatio * scale;
     ticks.push(
       <line key={`fn-${n}`} x1={centerX - TICK_HALF} y1={y} x2={centerX + TICK_HALF} y2={y}
         stroke={tickColor} strokeWidth={1} />
     );
   }
 
-  // Right (TN) — ticks are vertical dashes along the horizontal axis
-  for (let n = TICK_INTERVAL; n <= values.tn; n += TICK_INTERVAL) {
+  // Right (TN) — horizontal axis ticks (use TICK_INTERVAL_H)
+  for (let n = TICK_INTERVAL_H; n <= tv.tn; n += TICK_INTERVAL_H) {
     const x = centerX + n * scale;
     ticks.push(
       <line key={`tn-${n}`} x1={x} y1={centerY - TICK_HALF} x2={x} y2={centerY + TICK_HALF}
@@ -60,14 +80,19 @@ export function Axes({ centerX, centerY, scale, values }: AxesProps) {
     );
   }
 
-  // Left (FP) — ticks are vertical dashes
-  for (let n = TICK_INTERVAL; n <= values.fp; n += TICK_INTERVAL) {
+  // Left (FP) — horizontal axis ticks (use TICK_INTERVAL_H)
+  for (let n = TICK_INTERVAL_H; n <= tv.fp; n += TICK_INTERVAL_H) {
     const x = centerX - n * scale;
     ticks.push(
       <line key={`fp-${n}`} x1={x} y1={centerY - TICK_HALF} x2={x} y2={centerY + TICK_HALF}
         stroke={tickColor} strokeWidth={1} />
     );
   }
+
+  // Tick annotation logic
+  const showH = TICK_INTERVAL_H > 1;
+  const showV = TICK_INTERVAL_V > 1;
+  const sameInterval = TICK_INTERVAL_H === TICK_INTERVAL_V;
 
   return (
     <g className="axes">
@@ -126,6 +151,26 @@ export function Axes({ centerX, centerY, scale, values }: AxesProps) {
         <tspan x={centerX + rightLen + arrowSize + 6} y={centerY - 4}>True</tspan>
         <tspan x={centerX + rightLen + arrowSize + 6} y={centerY + 12}>negative</tspan>
       </text>
+
+      {/* Tick interval annotations */}
+      {(showH || showV) && sameInterval ? (
+        <text x={centerX + 8} y={centerY + 16} fontSize={10} fill="#64748b" style={{ userSelect: "none" }}>
+          1 tick = {TICK_INTERVAL_H}
+        </text>
+      ) : (
+        <>
+          {showH && (
+            <text x={centerX + 8} y={centerY + 16} fontSize={10} fill="#64748b" style={{ userSelect: "none" }}>
+              {"↔"} 1 tick = {TICK_INTERVAL_H}
+            </text>
+          )}
+          {showV && (
+            <text x={centerX + 8} y={centerY - 8} fontSize={10} fill="#64748b" style={{ userSelect: "none" }}>
+              {"↕"} 1 tick = {TICK_INTERVAL_V}
+            </text>
+          )}
+        </>
+      )}
     </g>
   );
 }

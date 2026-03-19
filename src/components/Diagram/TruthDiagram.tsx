@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import type { CellValues } from "../../utils/statistics";
-import { computeLayout, toSvg } from "../../utils/geometry";
+import { computeLayout, toSvg, computeAutoMagnification } from "../../utils/geometry";
 import { Axes } from "./Axes";
 import { SubjectBox } from "./SubjectBox";
 import { StatOverlays } from "./StatOverlays";
@@ -21,6 +21,10 @@ interface TruthDiagramProps {
   fixedLayout?: { centerX: number; centerY: number; scale: number };
   /** Max cell values for axis length (e.g., to cover both boxes on Compare screen) */
   axisExtent?: CellValues;
+  /** Unmagnified axis extent for tick label computation (when axisExtent is pre-magnified) */
+  tickAxisExtent?: CellValues;
+  /** Vertical magnification factor for low-prevalence readability. Shows a label when > 1. */
+  yMag?: number;
 }
 
 const SVG_WIDTH = 560;
@@ -30,7 +34,17 @@ const CORNER_HIT_RADIUS = 12;
 
 type DragMode = "box" | "corner-ul" | "corner-ur" | "corner-ll" | "corner-lr" | null;
 
-export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText, extraMargin = 0, fixedLayout, axisExtent }: TruthDiagramProps) {
+export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText, extraMargin = 0, fixedLayout, axisExtent, tickAxisExtent, yMag: yMagProp }: TruthDiagramProps) {
+  // Auto-compute magnification when not explicitly set
+  const autoMag = computeAutoMagnification(values);
+  const [magEnabled, setMagEnabled] = useState(true);
+  const yMag = yMagProp ?? (magEnabled ? autoMag : 1);
+
+  // Create magnified values for rendering (vertical axis scaled up)
+  const displayValues = useMemo<CellValues>(() => {
+    if (yMag <= 1) return values;
+    return { tp: Math.round(values.tp * yMag), fp: values.fp, fn: Math.round(values.fn * yMag), tn: values.tn };
+  }, [values, yMag]);
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const dragStart = useRef<{
@@ -40,8 +54,8 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
   const [hoverCorner, setHoverCorner] = useState<string | null>(null);
 
   const autoLayout = useMemo(
-    () => computeLayout(values, SVG_WIDTH, SVG_HEIGHT, 60 + extraMargin),
-    [values]
+    () => computeLayout(displayValues, SVG_WIDTH, SVG_HEIGHT, 60 + extraMargin),
+    [displayValues]
   );
 
   const computedLayout = fixedLayout || autoLayout;
@@ -69,11 +83,11 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
   );
 
   const corners = useMemo(() => ({
-    ul: toSvg(-values.fp, values.tp, centerX, centerY, scale),
-    ur: toSvg(values.tn, values.tp, centerX, centerY, scale),
-    ll: toSvg(-values.fp, -values.fn, centerX, centerY, scale),
-    lr: toSvg(values.tn, -values.fn, centerX, centerY, scale),
-  }), [values, centerX, centerY, scale]);
+    ul: toSvg(-displayValues.fp, displayValues.tp, centerX, centerY, scale),
+    ur: toSvg(displayValues.tn, displayValues.tp, centerX, centerY, scale),
+    ll: toSvg(-displayValues.fp, -displayValues.fn, centerX, centerY, scale),
+    lr: toSvg(displayValues.tn, -displayValues.fn, centerX, centerY, scale),
+  }), [displayValues, centerX, centerY, scale]);
 
   const nearCorner = useCallback(
     (pt: { x: number; y: number }): DragMode => {
@@ -216,7 +230,7 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
         <rect width={SVG_WIDTH} height={SVG_HEIGHT} fill="white" rx={8} />
 
         <SubjectBox
-          values={values}
+          values={displayValues}
           centerX={centerX}
           centerY={centerY}
           scale={scale}
@@ -224,7 +238,7 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
 
         {overlays.length > 0 && (
           <StatOverlays
-            values={values}
+            values={displayValues}
             centerX={centerX}
             centerY={centerY}
             scale={scale}
@@ -236,7 +250,8 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
           centerX={centerX}
           centerY={centerY}
           scale={scale}
-          values={axisExtent || values}
+          values={axisExtent ? (yMag > 1 ? { tp: Math.round(axisExtent.tp * yMag), fp: axisExtent.fp, fn: Math.round(axisExtent.fn * yMag), tn: axisExtent.tn } : axisExtent) : displayValues}
+          tickValues={tickAxisExtent || axisExtent || values}
         />
 
         {/* Corner handles */}
@@ -267,7 +282,20 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
 
         {/* Extra SVG (diagonals, ghost boxes) */}
         {renderExtraSvg?.({ centerX, centerY, scale })}
+
       </svg>
+
+      {/* Magnification indicator — below diagram, prominent */}
+      {/* Magnification indicator + toggle (only when auto-mag would apply) */}
+      {autoMag > 1 && yMagProp === undefined && (
+        <div className="text-center mt-2 px-4 flex items-center justify-center gap-2">
+          <label className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded-md cursor-pointer select-none">
+            <input type="checkbox" checked={magEnabled} onChange={(e) => setMagEnabled(e.target.checked)}
+              className="accent-amber-600" />
+            {magEnabled ? `Note: ↕ ${yMag}× vertical magnification` : "Magnify vertical axis"}
+          </label>
+        </div>
+      )}
 
       {/* Below-diagram text: custom or default hint */}
       {belowDiagramText ? (

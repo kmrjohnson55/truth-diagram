@@ -49,7 +49,6 @@ export function computeLayout(
 
   const scale = Math.min(usableW / totalH, usableH / totalV);
 
-  // Place origin so the box is centered in the usable area
   const centerX = margin + extentLeft * scale + (usableW - totalH * scale) / 2;
   const centerY = margin + extentUp * scale + (usableH - totalV * scale) / 2;
 
@@ -59,16 +58,34 @@ export function computeLayout(
 /**
  * Convert diagram coordinates to SVG coordinates.
  * In SVG, y increases downward, so we flip the y axis.
+ * Optional yMag multiplies the vertical axis for low-prevalence magnification.
  */
 export function toSvg(
   diagramX: number,
   diagramY: number,
   centerX: number,
   centerY: number,
-  scale: number
+  scale: number,
+  yMag = 1
 ): { x: number; y: number } {
   return {
     x: centerX + diagramX * scale,
-    y: centerY - diagramY * scale,
+    y: centerY - diagramY * scale * yMag,
   };
+}
+
+/**
+ * Compute auto-magnification factor for the vertical axis.
+ * When prevalence is very low, the box is too flat to read.
+ * Returns a factor that makes the vertical dimension visually comparable
+ * to the horizontal dimension (capped at 50×).
+ */
+export function computeAutoMagnification(v: CellValues): number {
+  const diseased = v.tp + v.fn;
+  const healthy = v.fp + v.tn;
+  if (diseased <= 0 || healthy <= 0) return 1;
+  const ratio = healthy / diseased;
+  if (ratio <= 10) return 1; // no magnification needed
+  // Magnify so the vertical dimension is at least 1/3 of horizontal
+  return Math.min(Math.round(ratio / 3), 50);
 }

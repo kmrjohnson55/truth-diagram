@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useRef } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { formatStat, formatRatio, computeStats, computeExpectedValues, computeChiSquare } from "../../utils/statistics";
-import { computeLayout, toSvg } from "../../utils/geometry";
+import { computeLayout, toSvg, computeAutoMagnification } from "../../utils/geometry";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
 import type { LessonNavProps } from "./lessonTypes";
 
@@ -111,7 +111,7 @@ function DraggableSecondBox({
     <g>
       <path d={pathD} fill={color} fillOpacity={0.08} stroke={color} strokeWidth={2.5}
         style={{ cursor: "grab" }} onMouseDown={handleMouseDown} />
-      <text x={ur.x + 4} y={ur.y - 6} fontSize={11} fontWeight={600} fill={color}>{label}</text>
+      <text x={lr.x - 4} y={lr.y - 6} fontSize={13} fontWeight={700} fill={color} textAnchor="end">{label}</text>
     </g>
   );
 }
@@ -246,6 +246,7 @@ export function Lesson9_Compare({
     return { tp: tpB, fp: healthy - tnB, fn: diseased - tpB, tn: tnB };
   });
   const [sameProportions, setSameProportions] = useState(true);
+  const [magEnabled, setMagEnabled] = useState(true);
   const [labelA, setLabelA] = useState("Test A");
   const [labelB, setLabelB] = useState("Test B");
 
@@ -326,16 +327,32 @@ export function Lesson9_Compare({
     }
   }, [sameProportions, valuesA]);
 
-  // Tight zoom: fit closely around both boxes
-  const fixedLayout = useMemo(() => {
-    const maxValues: CellValues = {
+  // Auto-magnification for low prevalence
+  const autoMag = useMemo(() => {
+    const combined: CellValues = {
       tp: Math.max(valuesA.tp, valuesB.tp),
       fp: Math.max(valuesA.fp, valuesB.fp),
       fn: Math.max(valuesA.fn, valuesB.fn),
       tn: Math.max(valuesA.tn, valuesB.tn),
     };
-    return computeLayout(maxValues, 560, 500, 65);
+    return computeAutoMagnification(combined);
   }, [valuesA, valuesB]);
+  const yMag = magEnabled ? autoMag : 1;
+
+  // Magnified values for display
+  const magA = useMemo<CellValues>(() => yMag <= 1 ? valuesA : { tp: Math.round(valuesA.tp * yMag), fp: valuesA.fp, fn: Math.round(valuesA.fn * yMag), tn: valuesA.tn }, [valuesA, yMag]);
+  const magB = useMemo<CellValues>(() => yMag <= 1 ? valuesB : { tp: Math.round(valuesB.tp * yMag), fp: valuesB.fp, fn: Math.round(valuesB.fn * yMag), tn: valuesB.tn }, [valuesB, yMag]);
+
+  // Tight zoom: fit closely around both magnified boxes
+  const fixedLayout = useMemo(() => {
+    const maxValues: CellValues = {
+      tp: Math.max(magA.tp, magB.tp),
+      fp: Math.max(magA.fp, magB.fp),
+      fn: Math.max(magA.fn, magB.fn),
+      tn: Math.max(magA.tn, magB.tn),
+    };
+    return computeLayout(maxValues, 560, 500, 65);
+  }, [magA, magB]);
 
   const loadPreset = (idx: number) => {
     const p = COMPARISON_PRESETS[idx];
@@ -353,7 +370,7 @@ export function Lesson9_Compare({
       lessonTitles={lessonTitles} values={valuesA}
       diagramFooter={
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs text-slate-600">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
             <label className="flex items-center gap-1.5">
               <input type="checkbox" checked={sameProportions} onChange={(e) => setSameProportions(e.target.checked)}
                 className="accent-indigo-500" />
@@ -384,33 +401,65 @@ export function Lesson9_Compare({
       }
       diagram={
         <TruthDiagram
-          values={valuesA}
-          onDrag={handleDragA}
+          values={magA}
+          onDrag={(newMagValues) => {
+            // Convert magnified drag values back to real values
+            if (yMag > 1) {
+              handleDragA({ tp: Math.round(newMagValues.tp / yMag), fp: newMagValues.fp, fn: Math.round(newMagValues.fn / yMag), tn: newMagValues.tn });
+            } else {
+              handleDragA(newMagValues);
+            }
+          }}
           overlays={[]}
           fixedLayout={fixedLayout}
+          yMag={1}
           axisExtent={{
+            tp: Math.max(magA.tp, magB.tp),
+            fp: Math.max(magA.fp, magB.fp),
+            fn: Math.max(magA.fn, magB.fn),
+            tn: Math.max(magA.tn, magB.tn),
+          }}
+          tickAxisExtent={{
             tp: Math.max(valuesA.tp, valuesB.tp),
             fp: Math.max(valuesA.fp, valuesB.fp),
             fn: Math.max(valuesA.fn, valuesB.fn),
             tn: Math.max(valuesA.tn, valuesB.tn),
           }}
-          renderExtraSvg={(layout) => (
-            <g>
-              <text
-                x={toSvg(valuesA.tn, valuesA.tp, layout.centerX, layout.centerY, layout.scale).x + 4}
-                y={toSvg(valuesA.tn, valuesA.tp, layout.centerX, layout.centerY, layout.scale).y - 6}
-                fontSize={11} fontWeight={600} fill="#2563eb">{labelA}</text>
-              <DraggableSecondBox
-                values={valuesB} centerX={layout.centerX} centerY={layout.centerY}
-                scale={layout.scale} color="#ea580c" label={labelB} onDrag={handleDragB} />
-            </g>
-          )}
+          renderExtraSvg={(layout) => {
+            const ulA = toSvg(-magA.fp, magA.tp, layout.centerX, layout.centerY, layout.scale);
+            return (
+              <g>
+                <text
+                  x={ulA.x + 4} y={ulA.y + 14}
+                  fontSize={13} fontWeight={700} fill="#2563eb">{labelA}</text>
+                <DraggableSecondBox
+                  values={magB} centerX={layout.centerX} centerY={layout.centerY}
+                  scale={layout.scale} color="#ea580c" label={labelB}
+                  onDrag={(newMagValues) => {
+                    if (yMag > 1) {
+                      handleDragB({ tp: Math.round(newMagValues.tp / yMag), fp: newMagValues.fp, fn: Math.round(newMagValues.fn / yMag), tn: newMagValues.tn });
+                    } else {
+                      handleDragB(newMagValues);
+                    }
+                  }} />
+              </g>
+            );
+          }}
           belowDiagramText={
             <>
-              <strong style={{ color: "#2563eb" }}>{labelA}</strong> (blue) vs{" "}
-              <strong style={{ color: "#ea580c" }}>{labelB}</strong> (orange)
-              — drag either box to move it.
-              {sameProportions && " Both boxes share the same population."}
+              <div className="text-sm font-semibold text-slate-700">
+                <strong style={{ color: "#2563eb" }}>{labelA}</strong> (blue) vs{" "}
+                <strong style={{ color: "#ea580c" }}>{labelB}</strong> (orange)
+              </div>
+              {autoMag > 1 && (
+                <div className="mt-1">
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer select-none text-xs text-slate-500">
+                    <input type="checkbox" checked={magEnabled} onChange={(e) => setMagEnabled(e.target.checked)}
+                      className="accent-slate-500" />
+                    {magEnabled ? `Note: ↕ ${yMag}× vertical magnification` : "Magnify vertical axis"}
+                  </label>
+                </div>
+              )}
             </>
           }
         />
@@ -422,9 +471,9 @@ export function Lesson9_Compare({
           <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Test Names</h3>
           <div className="grid grid-cols-2 gap-2">
             <input type="text" value={labelA} onChange={(e) => setLabelA(e.target.value || "Test A")}
-              className="px-2 py-1 text-xs border border-blue-200 rounded bg-blue-50 text-blue-700 font-semibold" />
+              className="px-2 py-1.5 text-sm border border-blue-200 rounded bg-blue-50 text-blue-700 font-bold" />
             <input type="text" value={labelB} onChange={(e) => setLabelB(e.target.value || "Test B")}
-              className="px-2 py-1 text-xs border border-orange-200 rounded bg-orange-50 text-orange-700 font-semibold" />
+              className="px-2 py-1.5 text-sm border border-orange-200 rounded bg-orange-50 text-orange-700 font-bold" />
           </div>
         </div>
 
@@ -470,25 +519,25 @@ export function Lesson9_Compare({
                 <CompareRow label="Youden's Index (J)" valueA={formatRatio(youdenIndex(statsA))} valueB={formatRatio(youdenIndex(statsB))} tooltip="Sensitivity + Specificity − 1. Range 0 (worthless) to 1 (perfect). 0.5 = moderate, 0.8+ = good." />
                 <CompareRow label="Diagnostic OR" valueA={formatRatio(diagnosticOddsRatio(valuesA))} valueB={formatRatio(diagnosticOddsRatio(valuesB))} tooltip="(TP×TN)/(FP×FN). Ratio of odds of positive result in diseased vs healthy. 1 = worthless, 10 = moderate, 100+ = strong." />
                 <CompareRow label="Chi-Square" valueA={formatRatio((() => { const e = computeExpectedValues(valuesA); return computeChiSquare(valuesA, e); })())} valueB={formatRatio((() => { const e = computeExpectedValues(valuesB); return computeChiSquare(valuesB, e); })())} tooltip="Tests whether the test discriminates better than chance. ≥3.84 = significant (p<0.05), ≥6.63 = p<0.01." />
+                {(() => {
+                  const nri = netReclassificationImprovement(statsA, statsB);
+                  const nriStr = isNaN(nri) ? "N/A" : (nri > 0 ? "+" : "") + (nri * 100).toFixed(1) + "%";
+                  const nriNote = isNaN(nri) ? "" : nri > 0 ? `(${labelB} better)` : nri < 0 ? `(${labelA} better)` : "(equal)";
+                  return (
+                    <tr className="border-t border-slate-100">
+                      <td className="py-1.5 px-2 text-xs font-medium text-slate-700" colSpan={1}>
+                        NRI
+                        <TooltipDot text="Net Reclassification Improvement = (SensB−SensA) + (SpecB−SpecA). Positive means B improves overall classification." />
+                      </td>
+                      <td className="py-1.5 px-2 text-xs text-center font-semibold tabular-nums text-slate-700" colSpan={2}>
+                        {nriStr} <span className="text-xs font-normal text-slate-600">{nriNote}</span>
+                      </td>
+                    </tr>
+                  );
+                })()}
               </tbody>
             </table>
           </div>
-
-          {/* NRI */}
-          {(() => {
-            const nri = netReclassificationImprovement(statsA, statsB);
-            return (
-              <div className="mt-2 bg-indigo-50 rounded-lg p-2 text-xs text-indigo-800">
-                <strong>NRI ({labelB} vs {labelA}):</strong>
-                <TooltipDot text="Net Reclassification Improvement = (SensB−SensA) + (SpecB−SpecA). Positive means B improves overall classification." />{" "}
-                {isNaN(nri) ? "N/A" : (nri > 0 ? "+" : "") + (nri * 100).toFixed(1) + "%"}
-                <span className="text-indigo-600 ml-1">
-                  {isNaN(nri) ? "" : nri > 0 ? `(${labelB} improves classification)` : nri < 0 ? `(${labelA} is better)` : "(no difference)"}
-                </span>
-              </div>
-            );
-          })()}
-
         </div>
       </div>
     </LessonLayout>
