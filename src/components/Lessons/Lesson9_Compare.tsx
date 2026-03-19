@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { formatStat, formatRatio, computeStats } from "../../utils/statistics";
