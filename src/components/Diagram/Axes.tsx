@@ -19,7 +19,7 @@ const TICK_HALF = 4; // px each side of the axis
 
 export function Axes({ centerX, centerY, scale, values }: AxesProps) {
   const arrowSize = 7;
-  const axisOvershoot = 20;
+  const axisOvershoot = Math.max(20, scale * 5);
 
   const upLen = values.tp * scale + axisOvershoot;
   const downLen = values.fn * scale + axisOvershoot;
