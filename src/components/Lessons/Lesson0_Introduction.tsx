@@ -95,7 +95,7 @@ export function Lesson0_Introduction({
             Using These Lessons
           </h3>
           <p className="text-sm text-slate-600 leading-relaxed">
-            Work through the seven lessons in order. Each builds on
+            Work through the eight lessons in order. Each builds on
             the previous one:
           </p>
           <ol className="mt-2 space-y-1 text-sm text-slate-600 list-decimal list-inside">
@@ -105,6 +105,7 @@ export function Lesson0_Introduction({
             <li><strong>ROC Curves</strong> &mdash; threshold tradeoffs</li>
             <li><strong>Likelihood Ratios &amp; Bayes</strong> &mdash; odds and slopes</li>
             <li><strong>Chi-Square Test</strong> &mdash; statistical significance</li>
+            <li><strong>Compare Two Tests</strong> &mdash; side-by-side on the same population</li>
             <li><strong>Sandbox</strong> &mdash; free exploration with all features</li>
           </ol>
         </div>

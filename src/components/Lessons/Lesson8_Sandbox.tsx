@@ -91,7 +91,7 @@ export function Lesson8_Sandbox({
   return (
     <LessonLayout
       meta={{
-        number: 7,
+        number: 8,
         title: "Sandbox",
         subtitle: "Explore freely — all overlays, stats, and the 2×2 table",
       }}

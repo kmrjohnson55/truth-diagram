@@ -32,6 +32,7 @@ const SHORT_TITLES = [
   "ROC Curves",
   "LR & Bayes",
   "Chi-Square",
+  "Compare",
   "Sandbox",
 ];
 

@@ -10,9 +10,10 @@ import { Lesson5_Trajectory } from "./components/Lessons/Lesson5_Trajectory";
 import { Lesson6_LikelihoodRatios } from "./components/Lessons/Lesson6_LikelihoodRatios";
 import { Lesson7_ChiSquare } from "./components/Lessons/Lesson7_ChiSquare";
 import { Lesson8_Sandbox } from "./components/Lessons/Lesson8_Sandbox";
+import { Lesson9_Compare } from "./components/Lessons/Lesson9_Compare";
 import { useDiagramState } from "./hooks/useDiagramState";
 
-const TOTAL_LESSONS = 7;
+const TOTAL_LESSONS = 8;
 
 const LESSON_TITLES = [
   "The Box and Axes",
@@ -21,6 +22,7 @@ const LESSON_TITLES = [
   "ROC Curves",
   "Likelihood Ratios & Bayes",
   "Chi-Square Test",
+  "Compare Two Tests",
   "Sandbox",
 ];
 
@@ -120,11 +122,19 @@ function App() {
       </AppShell>
     );
   }
-  // Lesson 7: Sandbox (formerly Lesson 8)
+  // Lesson 7: Compare Two Tests
   if (currentLesson === 7) {
     return (
       <AppShell>
-        <Lesson8_Sandbox key="lesson7" {...navProps} {...dataProps} />
+        <Lesson9_Compare key="lesson7" {...navProps} {...dataProps} />
+      </AppShell>
+    );
+  }
+  // Lesson 8: Sandbox
+  if (currentLesson === 8) {
+    return (
+      <AppShell>
+        <Lesson8_Sandbox key="lesson8" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
@@ -161,7 +171,8 @@ function App() {
               { n: 4, title: "ROC Curves", icon: "\uD83D\uDCC8" },
               { n: 5, title: "Likelihood Ratios & Bayes", icon: "\u2696\uFE0F" },
               { n: 6, title: "Chi-Square Test", icon: "\uD83D\uDCD0" },
-              { n: 7, title: "Sandbox", icon: "\uD83E\uDDEA" },
+              { n: 7, title: "Compare Two Tests", icon: "\uD83D\uDD0D" },
+              { n: 8, title: "Sandbox", icon: "\uD83E\uDDEA" },
             ].map((lesson) => (
               <button
                 key={lesson.n}
