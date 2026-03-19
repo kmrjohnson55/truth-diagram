@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { formatStat, formatRatio, computeStats } from "../../utils/statistics";
-import { toSvg } from "../../utils/geometry";
+import { computeLayout, toSvg } from "../../utils/geometry";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
 import type { LessonNavProps } from "./lessonTypes";
 
@@ -109,13 +109,7 @@ function SecondBoxOverlay({
         strokeWidth={2.5}
         strokeDasharray="8 4"
       />
-      <text
-        x={ur.x + 4}
-        y={ur.y - 6}
-        fontSize={11}
-        fontWeight={600}
-        fill={color}
-      >
+      <text x={ur.x + 4} y={ur.y - 6} fontSize={11} fontWeight={600} fill={color}>
         {label}
       </text>
     </g>
@@ -153,6 +147,46 @@ function CompareRow({
   );
 }
 
+/* ─── Compact 2×2 table for comparison ─── */
+
+function CompactTable({
+  values,
+  color,
+  label,
+}: {
+  values: CellValues;
+  color: string;
+  label: string;
+}) {
+  const { tp, fp, fn, tn } = values;
+  return (
+    <div className="rounded-lg border p-2" style={{ borderColor: color + "40" }}>
+      <div className="text-xs font-semibold mb-1" style={{ color }}>{label}</div>
+      <table className="w-full text-xs border-collapse">
+        <thead>
+          <tr>
+            <th className="p-1"></th>
+            <th className="p-1 text-center text-slate-600">D+</th>
+            <th className="p-1 text-center text-slate-600">D−</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="p-1 text-slate-600 border-r border-slate-200">T+</td>
+            <td className="p-1 text-center font-bold text-green-700">{tp}</td>
+            <td className="p-1 text-center font-bold text-yellow-700">{fp}</td>
+          </tr>
+          <tr>
+            <td className="p-1 text-slate-600 border-r border-slate-200">T−</td>
+            <td className="p-1 text-center font-bold text-red-700">{fn}</td>
+            <td className="p-1 text-center font-bold text-blue-700">{tn}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /* ─── Main component ─── */
 
 export function Lesson9_Compare({
@@ -167,15 +201,11 @@ export function Lesson9_Compare({
   onGoTo,
   lessonTitles,
 }: CompareProps) {
-  // Shared population
   const [diseased, setDiseased] = useState(values.tp + values.fn || 100);
   const [healthy, setHealthy] = useState(values.fp + values.tn || 100);
 
-  // Test A (shown as the solid blue box via TruthDiagram)
   const [sensA, setSensA] = useState(0.80);
   const [specA, setSpecA] = useState(0.80);
-
-  // Test B (shown as dashed orange overlay)
   const [sensB, setSensB] = useState(0.60);
   const [specB, setSpecB] = useState(0.90);
 
@@ -196,6 +226,21 @@ export function Lesson9_Compare({
 
   // Keep parent state in sync with Test A
   useMemo(() => setValues(valuesA), [valuesA]);
+
+  // Fixed layout: axes stay put when sliders move.
+  // Must fit any box position (full diseased on each vertical axis, full healthy on each horizontal)
+  const fixedLayout = useMemo(() => {
+    const maxValues: CellValues = { tp: diseased, fp: healthy, fn: diseased, tn: healthy };
+    return computeLayout(maxValues, 560, 500, 85);
+  }, [diseased, healthy]);
+
+  // When user drags box A, update sensA/specA from the new cell values
+  const handleDragA = (newValues: CellValues) => {
+    const d = newValues.tp + newValues.fn;
+    const h = newValues.fp + newValues.tn;
+    if (d > 0) setSensA(newValues.tp / d);
+    if (h > 0) setSpecA(newValues.tn / h);
+  };
 
   const loadPreset = (idx: number) => {
     const p = COMPARISON_PRESETS[idx];
@@ -224,20 +269,43 @@ export function Lesson9_Compare({
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       values={valuesA}
+      diagramFooter={
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <CompactTable values={valuesA} color="#2563eb" label={labelA} />
+            <CompactTable values={valuesB} color="#ea580c" label={labelB} />
+          </div>
+          <div className="flex gap-2">
+            <select
+              value=""
+              onChange={(e) => loadPreset(parseInt(e.target.value))}
+              className="flex-1 px-2 py-1 text-xs border border-slate-200 rounded-md bg-white text-slate-800"
+            >
+              <option value="">Load a comparison preset...</option>
+              {COMPARISON_PRESETS.map((p, i) => (
+                <option key={p.name} value={i}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      }
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
             <strong>Key insight:</strong> Two tests applied to the same
             population will produce different box positions on the diagram.
-            By overlaying both, you can see at a glance which test has
-            better sensitivity, specificity, or predictive values.
+            Both boxes have the same shape (same prevalence) but different
+            positions. By overlaying both, you can see at a glance which
+            test has better sensitivity, specificity, or predictive values.
           </p>
         </div>
       }
       diagram={
         <TruthDiagram
           values={valuesA}
+          onDrag={handleDragA}
           overlays={[]}
+          fixedLayout={fixedLayout}
           renderExtraSvg={(layout) => (
             <g>
               {/* Label for Test A */}
@@ -261,7 +329,7 @@ export function Lesson9_Compare({
           )}
           belowDiagramText={
             <>
-              <strong style={{ color: "#2563eb" }}>{labelA}</strong> (solid blue) vs{" "}
+              <strong style={{ color: "#2563eb" }}>{labelA}</strong> (solid blue, draggable) vs{" "}
               <strong style={{ color: "#ea580c" }}>{labelB}</strong> (dashed orange)
               — same {diseased + healthy} subjects ({diseased} diseased, {healthy} healthy).
             </>
@@ -270,21 +338,6 @@ export function Lesson9_Compare({
       }
     >
       <div className="space-y-4">
-        {/* Preset selector */}
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Comparison Presets</label>
-          <select
-            value=""
-            onChange={(e) => loadPreset(parseInt(e.target.value))}
-            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800"
-          >
-            <option value="">Load a comparison preset...</option>
-            {COMPARISON_PRESETS.map((p, i) => (
-              <option key={p.name} value={i}>{p.name}</option>
-            ))}
-          </select>
-        </div>
-
         {/* Population controls */}
         <div>
           <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Shared Population</h3>
