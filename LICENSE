@@ -1,0 +1,31 @@
+MIT License
+
+Copyright (c) 2026 Kevin M. Johnson, MD
+
+The Johnson Truth Diagram — Interactive 2×2 diagnostic testing visualization.
+
+Based on the published work:
+  - Johnson KM. The two by two diagram: a graphical truth table.
+    J Clin Epidemiol 1999;52:1073-1082.
+  - Johnson KM, Johnson BK. Visual presentation of statistical concepts
+    in diagnostic testing: the 2×2 diagram. AJR 2014;203:W14-W20.
+  - Johnson KM. Using Bayes' rule in diagnostic testing: a graphical
+    explanation. Diagnosis 2017;4(3):159-167.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
