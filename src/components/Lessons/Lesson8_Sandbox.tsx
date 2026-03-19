@@ -65,13 +65,6 @@ export function Lesson8_Sandbox({
   onGoTo,
   lessonTitles,
 }: Lesson8Props) {
-  const { tp: _tp2, fp: _fp2, fn: _fn2, tn: _tn2 } = values;
-  
-  
-  
-  
-  
-
   // Overlay toggle state
   const [activeOverlays, setActiveOverlays] = useState<OverlayType[]>([]);
   const [showDiagonals, setShowDiagonals] = useState(false);
@@ -101,6 +94,14 @@ export function Lesson8_Sandbox({
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
+      keyInsight={
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+          <p className="text-sm text-indigo-800">
+            Free exploration &mdash; toggle any overlay, drag the box, change values, and see
+            every statistic update in real time. Use presets below the diagram to load examples.
+          </p>
+        </div>
+      }
       values={values}
       diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
       diagram={
@@ -214,8 +215,9 @@ export function Lesson8_Sandbox({
           </div>
         </div>
 
-        <div className="pt-1 text-xs text-slate-600">
-          Total subjects: {stats.total}
+        <div className="pt-1 flex items-center justify-between text-xs text-slate-600 bg-slate-50 rounded-md px-2 py-1.5">
+          <span>Total subjects</span>
+          <span className="font-bold text-slate-800 tabular-nums">{stats.total}</span>
         </div>
       </div>
     </LessonLayout>

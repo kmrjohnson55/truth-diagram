@@ -2,6 +2,7 @@ import { useState } from "react";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { TwoByTwoTable } from "../UI/TwoByTwoTable";
 import { LessonLayout } from "./LessonLayout";
+import { CELL_COLORS } from "../../utils/colors";
 import { formatStat, computeStats } from "../../utils/statistics";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
 import type { LessonNavProps } from "./lessonTypes";
@@ -32,6 +33,13 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
   const lowPrevValues: CellValues = { tp: lowPrevTp, fp: lowPrevFp, fn: lowPrevFn, tn: lowPrevTn };
   const lowPrevStats = computeStats(lowPrevValues);
 
+  const displayValues = showComparison ? lowPrevValues : values;
+  const displayStats = showComparison ? lowPrevStats : stats;
+  const dTp = displayValues.tp;
+  const dFp = displayValues.fp;
+  const dFn = displayValues.fn;
+  const dTn = displayValues.tn;
+
   return (
     <LessonLayout
       meta={{ number: 3, title: "Predictive Values", subtitle: "What a test result means for the patient" }}
@@ -42,89 +50,113 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       keyInsight={
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
-            <strong>Key insight:</strong> Unlike sensitivity and specificity, PPV and NPV <strong>depend on prevalence</strong>. The same test with the same accuracy will have very different predictive values depending on how common the disease is.
+            <strong>Key insight:</strong> Unlike sensitivity and specificity, PPV and NPV <strong>depend heavily on prevalence</strong>. The same test accuracy produces very different predictive values depending on how common the disease is.
           </p>
-          <button
-            onClick={() => setShowComparison(!showComparison)}
-            className="mt-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-200 text-amber-800 hover:bg-amber-300 transition-colors"
-          >
-            {showComparison ? "Show original values" : "Show same test at 5% prevalence"}
-          </button>
         </div>
       }
       values={values}
-      diagramFooter={!showComparison ? <TwoByTwoTable values={values} setValue={setValue} setValues={setValues} /> : undefined}
+      diagramFooter={
+        <div className="space-y-3">
+          {!showComparison && <TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
+          <label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer select-none">
+            <input type="checkbox" checked={showComparison} onChange={(e) => setShowComparison(e.target.checked)}
+              className="accent-amber-600" />
+            <span className="text-xs font-medium text-slate-700">
+              Show same test at <strong>5% prevalence</strong> (sens &amp; spec unchanged)
+            </span>
+          </label>
+        </div>
+      }
       diagram={
         <TruthDiagram
-          values={showComparison ? lowPrevValues : values}
+          values={displayValues}
           onDrag={showComparison ? undefined : setValues}
           overlays={[activeView]}
           belowDiagramText={
-            <>
-              <strong>Try it:</strong> Use the &quot;Low Prevalence Screening&quot; preset to see how PPV drops
-              even with a good test. Compare with &quot;PSA (Case-Control)&quot; for higher prevalence.
-            </>
+            <span className="text-xs">
+              PPV and NPV change as you drag &mdash; try different presets to see the prevalence effect.
+            </span>
           }
         />
       }
     >
-      <div className="space-y-5">
-        {/* Toggle buttons */}
+      <div className="space-y-4">
+        {/* Toggle buttons with live values */}
         <div className="flex gap-2">
           <button
             onClick={() => setActiveView("ppv")}
-            className={`flex-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+            className={`flex-1 px-3 py-2 rounded-lg transition-colors text-center ${
               activeView === "ppv"
                 ? "bg-green-500 text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
-            PPV
+            <div className="text-xs font-semibold">PPV</div>
+            <div className="text-sm font-bold tabular-nums">{formatStat(displayStats.ppv)}</div>
           </button>
           <button
             onClick={() => setActiveView("npv")}
-            className={`flex-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+            className={`flex-1 px-3 py-2 rounded-lg transition-colors text-center ${
               activeView === "npv"
                 ? "bg-blue-500 text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
-            NPV
+            <div className="text-xs font-semibold">NPV</div>
+            <div className="text-sm font-bold tabular-nums">{formatStat(displayStats.npv)}</div>
           </button>
         </div>
 
-        <div className={activeView !== "ppv" ? "opacity-30 transition-opacity" : "transition-opacity"}>
-          <h3 className="text-sm font-bold text-green-700 uppercase tracking-wide mb-2">Positive Predictive Value (PPV)</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            If a patient tests positive, what is the probability they actually have the disease? PPV answers this question.
+        {/* Prevalence hint */}
+        <p className="text-xs text-slate-400 text-center -mt-2">
+          &uarr; Prevalence &rarr; &uarr; PPV, &darr; NPV
+        </p>
+
+        {/* PPV section — always visible */}
+        <div className={activeView !== "ppv" ? "opacity-40 transition-opacity" : "transition-opacity"}>
+          <h3 className="text-sm font-bold text-green-700 uppercase tracking-wide mb-1">Positive Predictive Value</h3>
+          <p className="text-xs text-slate-600 leading-relaxed italic">
+            &ldquo;My test was positive &mdash; do I really have the disease?&rdquo;
           </p>
-          <div className="mt-3 bg-green-50 rounded-lg p-3 space-y-2">
-            <div className="text-sm font-mono text-green-800">PPV = TP / (TP + FP)</div>
-            <div className="text-sm font-mono text-green-800">= {tp} / ({tp} + {fp}) = {tp} / {testPos}</div>
-            <div className="text-lg font-bold text-green-700">= {formatStat(stats.ppv)}</div>
+          <p className="text-xs text-slate-600 leading-relaxed mt-1">
+            The proportion of positive results that are true positives.
+            On the diagram, PPV is the fraction of the upper + left edges (test-positive group) that is <span style={{ color: CELL_COLORS.tp }} className="font-semibold">green (TP)</span> vs <span style={{ color: CELL_COLORS.fp }} className="font-semibold">yellow (FP)</span>.
+          </p>
+          <div className="mt-2 bg-green-50 rounded-lg p-3 space-y-1">
+            <div className="text-sm font-mono text-green-800">
+              PPV = <span style={{ color: CELL_COLORS.tp }}>TP</span> / (<span style={{ color: CELL_COLORS.tp }}>TP</span> + <span style={{ color: CELL_COLORS.fp }}>FP</span>)
+            </div>
+            <div className="text-sm font-mono text-green-800">
+              = <span style={{ color: CELL_COLORS.tp }}>{dTp}</span> / (<span style={{ color: CELL_COLORS.tp }}>{dTp}</span> + <span style={{ color: CELL_COLORS.fp }}>{dFp}</span>) = {dTp} / {dTp + dFp}
+            </div>
+            <div className="text-lg font-bold text-green-700">= {formatStat(displayStats.ppv)}</div>
           </div>
-          <p className="mt-2 text-xs text-slate-600">
-            On the diagram, the <span style={{color:"#22c55e"}} className="font-semibold">green TP hemiaxis</span> (up) and the <span style={{color:"#eab308"}} className="font-semibold">yellow FP hemiaxis</span> (left) are highlighted. PPV is the green fraction of their combined length.
-          </p>
         </div>
 
-        <div className={activeView !== "npv" ? "opacity-30 transition-opacity" : "transition-opacity"}>
-          <h3 className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-2">Negative Predictive Value (NPV)</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            If a patient tests negative, what is the probability they are truly healthy? NPV answers this question.
+        {/* NPV section — always visible */}
+        <div className={activeView !== "npv" ? "opacity-40 transition-opacity" : "transition-opacity"}>
+          <h3 className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-1">Negative Predictive Value</h3>
+          <p className="text-xs text-slate-600 leading-relaxed italic">
+            &ldquo;My test was negative &mdash; can I be sure I&rsquo;m healthy?&rdquo;
           </p>
-          <div className="mt-3 bg-blue-50 rounded-lg p-3 space-y-2">
-            <div className="text-sm font-mono text-blue-800">NPV = TN / (TN + FN)</div>
-            <div className="text-sm font-mono text-blue-800">= {tn} / ({tn} + {fn}) = {tn} / {testNeg}</div>
-            <div className="text-lg font-bold text-blue-700">= {formatStat(stats.npv)}</div>
+          <p className="text-xs text-slate-600 leading-relaxed mt-1">
+            The proportion of negative results that are true negatives.
+            On the diagram, NPV is the fraction of the lower + right edges (test-negative group) that is <span style={{ color: CELL_COLORS.tn }} className="font-semibold">blue (TN)</span> vs <span style={{ color: CELL_COLORS.fn }} className="font-semibold">red (FN)</span>.
+          </p>
+          <div className="mt-2 bg-blue-50 rounded-lg p-3 space-y-1">
+            <div className="text-sm font-mono text-blue-800">
+              NPV = <span style={{ color: CELL_COLORS.tn }}>TN</span> / (<span style={{ color: CELL_COLORS.tn }}>TN</span> + <span style={{ color: CELL_COLORS.fn }}>FN</span>)
+            </div>
+            <div className="text-sm font-mono text-blue-800">
+              = <span style={{ color: CELL_COLORS.tn }}>{dTn}</span> / (<span style={{ color: CELL_COLORS.tn }}>{dTn}</span> + <span style={{ color: CELL_COLORS.fn }}>{dFn}</span>) = {dTn} / {dTn + dFn}
+            </div>
+            <div className="text-lg font-bold text-blue-700">= {formatStat(displayStats.npv)}</div>
           </div>
-          <p className="mt-2 text-xs text-slate-600">
-            On the diagram, the <span style={{color:"#3b82f6"}} className="font-semibold">blue TN hemiaxis</span> (right) and the <span style={{color:"#ef4444"}} className="font-semibold">red FN hemiaxis</span> (down) are highlighted. NPV is the blue fraction of their combined length.
-          </p>
         </div>
 
+        {/* Prevalence comparison table */}
         {showComparison && (
           <div className="bg-slate-50 rounded-lg p-3 space-y-2">
             <h4 className="text-xs font-bold text-slate-600 uppercase">Prevalence Comparison</h4>
@@ -150,21 +182,26 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
                 <tr className="bg-amber-50">
                   <td className="p-1 text-green-700 font-semibold">PPV</td>
                   <td className="p-1 text-center font-bold text-green-700">{formatStat(stats.ppv)}</td>
-                  <td className="p-1 text-center font-bold text-green-700">{formatStat(lowPrevStats.ppv)}</td>
+                  <td className="p-1 text-center font-bold" style={{ color: lowPrevStats.ppv < stats.ppv * 0.8 ? "#dc2626" : CELL_COLORS.tp }}>
+                    {formatStat(lowPrevStats.ppv)}
+                    {lowPrevStats.ppv < stats.ppv * 0.8 && <span className="ml-1 text-red-500">&darr;</span>}
+                  </td>
                 </tr>
                 <tr className="bg-amber-50">
                   <td className="p-1 text-blue-700 font-semibold">NPV</td>
                   <td className="p-1 text-center font-bold text-blue-700">{formatStat(stats.npv)}</td>
-                  <td className="p-1 text-center font-bold text-blue-700">{formatStat(lowPrevStats.npv)}</td>
+                  <td className="p-1 text-center font-bold" style={{ color: lowPrevStats.npv > stats.npv * 1.05 ? "#16a34a" : CELL_COLORS.tn }}>
+                    {formatStat(lowPrevStats.npv)}
+                    {lowPrevStats.npv > stats.npv * 1.05 && <span className="ml-1 text-green-500">&uarr;</span>}
+                  </td>
                 </tr>
               </tbody>
             </table>
             <p className="text-xs text-slate-600 mt-1">
-              Notice: sensitivity and specificity stay the same, but PPV drops dramatically at low prevalence. This is why screening healthy populations produces many false alarms.
+              Sensitivity and specificity stay the same, but PPV drops dramatically at low prevalence. This is why screening healthy populations produces many false alarms.
             </p>
           </div>
         )}
-
 
       </div>
     </LessonLayout>

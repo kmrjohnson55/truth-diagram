@@ -46,31 +46,34 @@ export function DiagonalOverlays({
       {/* Box diagonal (brown dashed) — odds before the test */}
       <line x1={ll.x} y1={ll.y} x2={ur.x} y2={ur.y}
         stroke="#92400e" strokeWidth={2.5} strokeDasharray="6 4" opacity={0.7} />
-      <text x={midBox.x + 8} y={midBox.y - 8}
-        fontSize={11} fontWeight={600} fill="#92400e" opacity={0.85}>
-        slope = odds before the test = {fmt(pretestSlope)}
+      <text fontSize={13} fontWeight={600} fill="#92400e" opacity={0.85}
+        style={{ userSelect: "none" }}>
+        <tspan x={midBox.x + 8} y={midBox.y + 14}>slope = odds</tspan>
+        <tspan x={midBox.x + 8} y={midBox.y + 30}>before the test = {fmt(pretestSlope)}</tspan>
       </text>
 
       {/* UL quadrant diagonal (green) — odds after a positive test */}
-      {fp > 0 && tp > 0 && (
+      {(fp > 0 || tp > 0) && (
         <>
           <line x1={posStart.x} y1={posStart.y} x2={posEnd.x} y2={posEnd.y}
             stroke="#16a34a" strokeWidth={3} opacity={0.85} />
-          <text x={midPos.x - 8} y={midPos.y - 8}
-            fontSize={11} fontWeight={600} fill="#16a34a" textAnchor="end" opacity={0.9}>
-            slope = odds after a positive test = {fmt(postPosSlope)}
+          <text fontSize={13} fontWeight={600} fill="#16a34a" textAnchor="end" opacity={0.9}
+            style={{ userSelect: "none" }}>
+            <tspan x={midPos.x - 16} y={midPos.y + 14}>slope = odds after</tspan>
+            <tspan x={midPos.x - 16} y={midPos.y + 30}>a positive test = {fmt(postPosSlope)}</tspan>
           </text>
         </>
       )}
 
       {/* LR quadrant diagonal (red) — odds after a negative test */}
-      {fn > 0 && tn > 0 && (
+      {(fn > 0 || tn > 0) && (
         <>
           <line x1={negStart.x} y1={negStart.y} x2={negEnd.x} y2={negEnd.y}
             stroke="#dc2626" strokeWidth={3} opacity={0.85} />
-          <text x={midNeg.x + 8} y={midNeg.y + 14}
-            fontSize={11} fontWeight={600} fill="#dc2626" opacity={0.9}>
-            slope = odds after a negative test = {fmt(postNegSlope)}
+          <text fontSize={13} fontWeight={600} fill="#dc2626" opacity={0.9}
+            style={{ userSelect: "none" }}>
+            <tspan x={midNeg.x + 8} y={midNeg.y + 34}>slope = odds after</tspan>
+            <tspan x={midNeg.x + 8} y={midNeg.y + 50}>a negative test = {fmt(postNegSlope)}</tspan>
           </text>
         </>
       )}

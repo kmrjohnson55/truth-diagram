@@ -165,12 +165,19 @@ export function Lesson7_ChiSquare({
   const pValue = useMemo(() => chiSquarePValue(chi2), [chi2]);
 
   // Per-cell contributions
+  const cellColors: Record<string, string> = { tp: CELL_COLORS.tp, fp: CELL_COLORS.fp, fn: CELL_COLORS.fn, tn: CELL_COLORS.tn };
   const cells = (["tp", "fp", "fn", "tn"] as (keyof CellValues)[]).map((key) => {
     const o = values[key];
     const e = expected[key];
     const contrib = e > 0 ? (o - e) ** 2 / e : 0;
-    return { key, label: key.toUpperCase(), o, e, contrib };
+    return { key, label: key.toUpperCase(), color: cellColors[key], o, e, contrib };
   });
+
+  // Chi-square interpretation
+  const chi2Interp = chi2 >= 10.83 ? "Very strong evidence of association"
+    : chi2 >= 6.63 ? "Strong evidence of association"
+    : chi2 >= 3.84 ? "Moderate evidence of association"
+    : "Weak or no evidence of association";
 
   return (
     <LessonLayout
@@ -297,46 +304,29 @@ export function Lesson7_ChiSquare({
           </p>
         </div>
 
-        {/* Chi-square statistic box (with toggle inside) */}
+        {/* Chi-square statistic box */}
         <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-2">
-          <h3 className="text-sm font-bold text-indigo-800 uppercase tracking-wide" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-            &#x3C7;&sup2; Statistic
-          </h3>
-          <div className="text-sm font-mono text-indigo-800">
-            <span style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>&#x3C7;</span>&sup2; = &Sigma;(O&minus;E)&sup2;/E ={" "}
-            <strong className="text-lg">{formatRatio(chi2)}</strong>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-indigo-800" style={{ fontFamily: "Georgia, serif" }}>
+              &chi;&sup2; = {formatRatio(chi2)}
+            </span>
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-white ${pValue < 0.05 ? "bg-green-600" : "bg-amber-500"}`}>
+              {pValue < 0.05 ? "Significant" : "Not significant"}
+            </span>
           </div>
-          <p className="text-xs text-indigo-600 leading-relaxed">
-            Each cell contributes the squared distance between observed and
-            expected, normalized by expected. Larger displacements on the
-            diagram produce larger values.
+          <p className="text-xs text-indigo-700 italic">{chi2Interp}</p>
+          <div className="text-xs text-indigo-700">
+            p-value = <strong>{pValue < 0.001 ? "< 0.001" : pValue.toFixed(4)}</strong>
+            <span className="text-indigo-500 ml-1">(df = 1)</span>
+          </div>
+          <p className="text-[10px] text-indigo-600 leading-relaxed">
+            Each cell contributes (O&minus;E)&sup2;/E. Larger box displacement = larger &chi;&sup2;.
           </p>
-          <div className="text-sm text-indigo-700">
-            p-value ={" "}
-            <strong>
-              {pValue < 0.001
-                ? "< 0.001"
-                : pValue.toFixed(4)}
-            </strong>
-            <span className="text-xs text-indigo-600 ml-1">(df = 1)</span>
-          </div>
-          <div
-            className={`text-sm font-medium rounded-md px-3 py-1.5 ${
-              pValue < 0.05
-                ? "bg-green-100 text-green-800"
-                : "bg-amber-100 text-amber-800"
-            }`}
-          >
-            {pValue < 0.05
-              ? "Significant association between test result and disease status (p < 0.05)"
-              : "No significant association detected (p \u2265 0.05)"}
-          </div>
-          {/* Significance thresholds */}
-          <div className="text-xs text-indigo-700 mt-2 space-y-0.5">
-            <div className="font-semibold">For a 2&times;2 table with 1 degree of freedom:</div>
-            <div>&bull; <span style={{ fontFamily: "Georgia, serif" }}>&chi;</span>&sup2; &ge; 3.84 &rarr; p &lt; 0.05 (significant at 5%)</div>
-            <div>&bull; <span style={{ fontFamily: "Georgia, serif" }}>&chi;</span>&sup2; &ge; 6.63 &rarr; p &lt; 0.01 (significant at 1%)</div>
-            <div>&bull; <span style={{ fontFamily: "Georgia, serif" }}>&chi;</span>&sup2; &ge; 10.83 &rarr; p &lt; 0.001 (highly significant)</div>
+          {/* Compact significance thresholds */}
+          <div className="text-[10px] text-indigo-500 flex flex-wrap gap-x-3">
+            <span>&ge;3.84 &rarr; p&lt;.05</span>
+            <span>&ge;6.63 &rarr; p&lt;.01</span>
+            <span>&ge;10.83 &rarr; p&lt;.001</span>
           </div>
         </div>
 
@@ -363,7 +353,7 @@ export function Lesson7_ChiSquare({
               <tbody>
                 {cells.map((c) => (
                   <tr key={c.key} className="border-t border-slate-100">
-                    <td className="p-2 font-semibold text-slate-700">{c.label}</td>
+                    <td className="p-2 font-bold" style={{ color: c.color }}>{c.label}</td>
                     <td className="p-2 text-center font-mono">{c.o}</td>
                     <td className="p-2 text-center font-mono text-slate-600">
                       {c.e.toFixed(1)}

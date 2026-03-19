@@ -25,6 +25,8 @@ interface TruthDiagramProps {
   tickAxisExtent?: CellValues;
   /** Vertical magnification factor for low-prevalence readability. Shows a label when > 1. */
   yMag?: number;
+  /** Hide the "1 tick = N" annotation near the origin */
+  hideTickAnnotation?: boolean;
 }
 
 const SVG_WIDTH = 560;
@@ -34,7 +36,7 @@ const CORNER_HIT_RADIUS = 12;
 
 type DragMode = "box" | "corner-ul" | "corner-ur" | "corner-ll" | "corner-lr" | null;
 
-export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText, extraMargin = 0, fixedLayout, axisExtent, tickAxisExtent, yMag: yMagProp }: TruthDiagramProps) {
+export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText, extraMargin = 0, fixedLayout, axisExtent, tickAxisExtent, yMag: yMagProp, hideTickAnnotation }: TruthDiagramProps) {
   // Auto-compute magnification when not explicitly set
   const autoMag = computeAutoMagnification(values);
   const [magEnabled, setMagEnabled] = useState(true);
@@ -252,6 +254,7 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
           scale={scale}
           values={axisExtent ? (yMag > 1 ? { tp: Math.round(axisExtent.tp * yMag), fp: axisExtent.fp, fn: Math.round(axisExtent.fn * yMag), tn: axisExtent.tn } : axisExtent) : displayValues}
           tickValues={tickAxisExtent || axisExtent || values}
+          hideTickAnnotation={hideTickAnnotation}
         />
 
         {/* Corner handles */}

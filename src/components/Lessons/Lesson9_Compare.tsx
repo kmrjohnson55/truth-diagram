@@ -374,7 +374,7 @@ export function Lesson9_Compare({
             <label className="flex items-center gap-1.5">
               <input type="checkbox" checked={sameProportions} onChange={(e) => setSameProportions(e.target.checked)}
                 className="accent-indigo-500" />
-              Same population proportions
+              <span>Same population proportions <span className="text-slate-400">&mdash; editing one adjusts the other</span></span>
             </label>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -486,8 +486,12 @@ export function Lesson9_Compare({
             <table className="w-full text-sm">
               <thead><tr className="bg-slate-100">
                 <th className="py-1.5 px-2 text-left text-xs text-slate-600"></th>
-                <th className="py-1.5 px-2 text-center text-xs font-semibold text-blue-700">{labelA}</th>
-                <th className="py-1.5 px-2 text-center text-xs font-semibold text-orange-700">{labelB}</th>
+                <th className="py-1.5 px-2 text-center text-xs font-semibold text-blue-700">
+                  <span className="inline-block w-2 h-2 rounded-full bg-blue-600 mr-1" />{labelA}
+                </th>
+                <th className="py-1.5 px-2 text-center text-xs font-semibold text-orange-700">
+                  <span className="inline-block w-2 h-2 rounded-full bg-orange-600 mr-1" />{labelB}
+                </th>
               </tr></thead>
               <tbody>
                 <CompareRow label="Sensitivity" valueA={formatStat(statsA.sensitivity)} valueB={formatStat(statsB.sensitivity)} tooltip="Proportion of diseased subjects correctly identified. Higher is better." />
@@ -503,6 +507,8 @@ export function Lesson9_Compare({
           </div>
         </div>
 
+        <hr className="border-slate-200" />
+
         {/* Advanced comparison statistics */}
         <div>
           <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
@@ -512,8 +518,12 @@ export function Lesson9_Compare({
             <table className="w-full text-sm">
               <thead><tr className="bg-slate-100">
                 <th className="py-1.5 px-2 text-left text-xs text-slate-600"></th>
-                <th className="py-1.5 px-2 text-center text-xs font-semibold text-blue-700">{labelA}</th>
-                <th className="py-1.5 px-2 text-center text-xs font-semibold text-orange-700">{labelB}</th>
+                <th className="py-1.5 px-2 text-center text-xs font-semibold text-blue-700">
+                  <span className="inline-block w-2 h-2 rounded-full bg-blue-600 mr-1" />{labelA}
+                </th>
+                <th className="py-1.5 px-2 text-center text-xs font-semibold text-orange-700">
+                  <span className="inline-block w-2 h-2 rounded-full bg-orange-600 mr-1" />{labelB}
+                </th>
               </tr></thead>
               <tbody>
                 <CompareRow label="Youden's Index (J)" valueA={formatRatio(youdenIndex(statsA))} valueB={formatRatio(youdenIndex(statsB))} tooltip="Sensitivity + Specificity − 1. Range 0 (worthless) to 1 (perfect). 0.5 = moderate, 0.8+ = good." />
@@ -522,15 +532,19 @@ export function Lesson9_Compare({
                 {(() => {
                   const nri = netReclassificationImprovement(statsA, statsB);
                   const nriStr = isNaN(nri) ? "N/A" : (nri > 0 ? "+" : "") + (nri * 100).toFixed(1) + "%";
-                  const nriNote = isNaN(nri) ? "" : nri > 0 ? `(${labelB} better)` : nri < 0 ? `(${labelA} better)` : "(equal)";
+                  const nriInterp = isNaN(nri) ? ""
+                    : nri > 0 ? `${labelB} improves overall classification by ${(nri * 100).toFixed(1)}%`
+                    : nri < 0 ? `${labelA} is better by ${(-nri * 100).toFixed(1)}%`
+                    : "Both tests classify equally well";
                   return (
                     <tr className="border-t border-slate-100">
                       <td className="py-1.5 px-2 text-xs font-medium text-slate-700" colSpan={1}>
                         NRI
                         <TooltipDot text="Net Reclassification Improvement = (SensB−SensA) + (SpecB−SpecA). Positive means B improves overall classification." />
                       </td>
-                      <td className="py-1.5 px-2 text-xs text-center font-semibold tabular-nums text-slate-700" colSpan={2}>
-                        {nriStr} <span className="text-xs font-normal text-slate-600">{nriNote}</span>
+                      <td className="py-1.5 px-2 text-xs text-center tabular-nums text-slate-700" colSpan={2}>
+                        <span className="font-semibold">{nriStr}</span>
+                        <span className="block text-[10px] font-normal text-slate-500 mt-0.5">{nriInterp}</span>
                       </td>
                     </tr>
                   );

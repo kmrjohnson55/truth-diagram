@@ -1,10 +1,11 @@
 import type { CellValues } from "../../utils/statistics";
+import { CELL_COLORS } from "../../utils/colors";
 
-const AXIS_LABEL: Record<string, string> = {
-  tp: "True positive",
-  fn: "False negative",
-  fp: "False positive",
-  tn: "True negative",
+const AXIS_LABEL: Record<string, { text: string; color: string }> = {
+  tp: { text: "True positive", color: CELL_COLORS.tp },
+  fn: { text: "False negative", color: CELL_COLORS.fn },
+  fp: { text: "False positive", color: CELL_COLORS.fp },
+  tn: { text: "True negative", color: CELL_COLORS.tn },
 };
 
 interface AxesProps {
@@ -14,6 +15,8 @@ interface AxesProps {
   values: CellValues;
   /** Original (unmagnified) values for tick mark computation */
   tickValues?: CellValues;
+  /** Hide the "1 tick = N" annotation text */
+  hideTickAnnotation?: boolean;
 }
 
 const TICK_HALF = 4; // px each side of the axis
@@ -25,7 +28,7 @@ function niceInterval(rawInterval: number): number {
   return NICE_NUMBERS.find(n => n >= rawInterval) || Math.ceil(rawInterval / 1000) * 1000;
 }
 
-export function Axes({ centerX, centerY, scale, values, tickValues }: AxesProps) {
+export function Axes({ centerX, centerY, scale, values, tickValues, hideTickAnnotation }: AxesProps) {
   // Use tickValues for tick computation (unmagnified), values for axis length
   const tv = tickValues || values;
 
@@ -46,7 +49,6 @@ export function Axes({ centerX, centerY, scale, values, tickValues }: AxesProps)
 
   const dim = "#94a3b8";
   const tickColor = "#cbd5e1";
-  const labelColor = "#374151";
 
   // Generate tick marks for each axis direction
   const ticks: React.ReactElement[] = [];
@@ -133,43 +135,45 @@ export function Axes({ centerX, centerY, scale, values, tickValues }: AxesProps)
 
       {/* ── Labels ── */}
       <text x={centerX} y={centerY - upLen - arrowSize - 6}
-        textAnchor="middle" fontSize={13} fontWeight={500} fill={labelColor}
-        style={{ userSelect: "none" }}>{AXIS_LABEL.tp}</text>
+        textAnchor="middle" fontSize={13} fontWeight={600} fill={AXIS_LABEL.tp.color}
+        style={{ userSelect: "none" }}>{AXIS_LABEL.tp.text}</text>
 
       <text x={centerX} y={centerY + downLen + arrowSize + 16}
-        textAnchor="middle" fontSize={13} fontWeight={500} fill={labelColor}
-        style={{ userSelect: "none" }}>{AXIS_LABEL.fn}</text>
+        textAnchor="middle" fontSize={13} fontWeight={600} fill={AXIS_LABEL.fn.color}
+        style={{ userSelect: "none" }}>{AXIS_LABEL.fn.text}</text>
 
-      <text textAnchor="end" fontSize={13} fontWeight={500} fill={labelColor}
+      <text textAnchor="end" fontSize={13} fontWeight={600} fill={AXIS_LABEL.fp.color}
         style={{ userSelect: "none" }}>
         <tspan x={centerX - leftLen - arrowSize - 6} y={centerY - 4}>False</tspan>
         <tspan x={centerX - leftLen - arrowSize - 6} y={centerY + 12}>positive</tspan>
       </text>
 
-      <text textAnchor="start" fontSize={13} fontWeight={500} fill={labelColor}
+      <text textAnchor="start" fontSize={13} fontWeight={600} fill={AXIS_LABEL.tn.color}
         style={{ userSelect: "none" }}>
         <tspan x={centerX + rightLen + arrowSize + 6} y={centerY - 4}>True</tspan>
         <tspan x={centerX + rightLen + arrowSize + 6} y={centerY + 12}>negative</tspan>
       </text>
 
       {/* Tick interval annotations */}
-      {(showH || showV) && sameInterval ? (
-        <text x={centerX + 8} y={centerY + 16} fontSize={10} fill="#64748b" style={{ userSelect: "none" }}>
-          1 tick = {TICK_INTERVAL_H}
-        </text>
-      ) : (
-        <>
-          {showH && (
-            <text x={centerX + 8} y={centerY + 16} fontSize={10} fill="#64748b" style={{ userSelect: "none" }}>
-              {"↔"} 1 tick = {TICK_INTERVAL_H}
-            </text>
-          )}
-          {showV && (
-            <text x={centerX + 8} y={centerY - 8} fontSize={10} fill="#64748b" style={{ userSelect: "none" }}>
-              {"↕"} 1 tick = {TICK_INTERVAL_V}
-            </text>
-          )}
-        </>
+      {!hideTickAnnotation && (
+        (showH || showV) && sameInterval ? (
+          <text x={centerX + 8} y={centerY + 16} fontSize={10} fill="#64748b" style={{ userSelect: "none" }}>
+            1 tick = {TICK_INTERVAL_H}
+          </text>
+        ) : (
+          <>
+            {showH && (
+              <text x={centerX + 8} y={centerY + 16} fontSize={10} fill="#64748b" style={{ userSelect: "none" }}>
+                {"↔"} 1 tick = {TICK_INTERVAL_H}
+              </text>
+            )}
+            {showV && (
+              <text x={centerX + 8} y={centerY - 8} fontSize={10} fill="#64748b" style={{ userSelect: "none" }}>
+                {"↕"} 1 tick = {TICK_INTERVAL_V}
+              </text>
+            )}
+          </>
+        )
       )}
     </g>
   );
