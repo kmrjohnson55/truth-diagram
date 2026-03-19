@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { formatStat, formatRatio, computeStats } from "../../utils/statistics";
@@ -76,15 +76,16 @@ function computeFromSensSpec(
   return { tp, fp, fn, tn };
 }
 
-/* ─── Second box overlay ─── */
+/* ─── Draggable second box overlay ─── */
 
-function SecondBoxOverlay({
+function DraggableSecondBox({
   values,
   centerX,
   centerY,
   scale,
   color,
   label,
+  onDrag,
 }: {
   values: CellValues;
   centerX: number;
@@ -92,12 +93,69 @@ function SecondBoxOverlay({
   scale: number;
   color: string;
   label: string;
+  onDrag: (newSens: number, newSpec: number) => void;
 }) {
+  const dragging = useRef(false);
+  const dragStart = useRef<{ x: number; y: number; tp: number; tn: number } | null>(null);
+
   const ul = toSvg(-values.fp, values.tp, centerX, centerY, scale);
   const ur = toSvg(values.tn, values.tp, centerX, centerY, scale);
   const ll = toSvg(-values.fp, -values.fn, centerX, centerY, scale);
   const lr = toSvg(values.tn, -values.fn, centerX, centerY, scale);
   const pathD = `M${ul.x},${ul.y} L${ur.x},${ur.y} L${lr.x},${lr.y} L${ll.x},${ll.y} Z`;
+
+  const diseased = values.tp + values.fn;
+  const healthy = values.fp + values.tn;
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    dragging.current = true;
+    // Get SVG coordinate from client coordinate
+    const svg = (e.target as SVGElement).ownerSVGElement;
+    if (!svg) return;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+    dragStart.current = { x: pt.x, y: pt.y, tp: values.tp, tn: values.tn };
+  }, [values.tp, values.tn]);
+
+  useEffect(() => {
+    if (!dragging.current) return;
+
+    const handleMove = (e: MouseEvent) => {
+      if (!dragging.current || !dragStart.current) return;
+      const svg = document.querySelector("svg[viewBox]") as SVGSVGElement;
+      if (!svg) return;
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return;
+      const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+
+      const dx = pt.x - dragStart.current.x;
+      const dy = pt.y - dragStart.current.y;
+      const dUnitsX = dx / scale;
+      const dUnitsY = -dy / scale;
+
+      const newTp = Math.max(0, Math.min(diseased, Math.round(dragStart.current.tp + dUnitsY)));
+      const newTn = Math.max(0, Math.min(healthy, Math.round(dragStart.current.tn + dUnitsX)));
+
+      const newSens = diseased > 0 ? newTp / diseased : 0;
+      const newSpec = healthy > 0 ? newTn / healthy : 0;
+      onDrag(newSens, newSpec);
+    };
+
+    const handleUp = () => {
+      dragging.current = false;
+      dragStart.current = null;
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  });
 
   return (
     <g>
@@ -107,7 +165,8 @@ function SecondBoxOverlay({
         fillOpacity={0.08}
         stroke={color}
         strokeWidth={2.5}
-        strokeDasharray="8 4"
+        style={{ cursor: "grab" }}
+        onMouseDown={handleMouseDown}
       />
       <text x={ur.x + 4} y={ur.y - 6} fontSize={11} fontWeight={600} fill={color}>
         {label}
@@ -147,7 +206,7 @@ function CompareRow({
   );
 }
 
-/* ─── Compact 2×2 table for comparison ─── */
+/* ─── Compact 2×2 table ─── */
 
 function CompactTable({
   values,
@@ -227,19 +286,27 @@ export function Lesson9_Compare({
   // Keep parent state in sync with Test A
   useMemo(() => setValues(valuesA), [valuesA]);
 
-  // Fixed layout: axes stay put when sliders move.
-  // Must fit any box position (full diseased on each vertical axis, full healthy on each horizontal)
+  // Fixed layout
   const fixedLayout = useMemo(() => {
     const maxValues: CellValues = { tp: diseased, fp: healthy, fn: diseased, tn: healthy };
     return computeLayout(maxValues, 560, 500, 85);
   }, [diseased, healthy]);
 
-  // When user drags box A, update sensA/specA from the new cell values
+  // Drag Test A: box drag updates sens/spec, corner drag also updates population
   const handleDragA = (newValues: CellValues) => {
     const d = newValues.tp + newValues.fn;
     const h = newValues.fp + newValues.tn;
+    // Corner drag changes population — update diseased/healthy (affects both boxes)
+    if (d !== diseased) setDiseased(d);
+    if (h !== healthy) setHealthy(h);
     if (d > 0) setSensA(newValues.tp / d);
     if (h > 0) setSpecA(newValues.tn / h);
+  };
+
+  // Drag Test B: updates sensB/specB
+  const handleDragB = (newSens: number, newSpec: number) => {
+    setSensB(newSens);
+    setSpecB(newSpec);
   };
 
   const loadPreset = (idx: number) => {
@@ -297,6 +364,7 @@ export function Lesson9_Compare({
             Both boxes have the same shape (same prevalence) but different
             positions. By overlaying both, you can see at a glance which
             test has better sensitivity, specificity, or predictive values.
+            Drag either box to explore; drag a corner to resize both.
           </p>
         </div>
       }
@@ -316,22 +384,23 @@ export function Lesson9_Compare({
               >
                 {labelA}
               </text>
-              {/* Test B overlay */}
-              <SecondBoxOverlay
+              {/* Test B overlay — draggable */}
+              <DraggableSecondBox
                 values={valuesB}
                 centerX={layout.centerX}
                 centerY={layout.centerY}
                 scale={layout.scale}
                 color="#ea580c"
                 label={labelB}
+                onDrag={handleDragB}
               />
             </g>
           )}
           belowDiagramText={
             <>
-              <strong style={{ color: "#2563eb" }}>{labelA}</strong> (solid blue, draggable) vs{" "}
-              <strong style={{ color: "#ea580c" }}>{labelB}</strong> (dashed orange)
-              — same {diseased + healthy} subjects ({diseased} diseased, {healthy} healthy).
+              <strong style={{ color: "#2563eb" }}>{labelA}</strong> (blue) vs{" "}
+              <strong style={{ color: "#ea580c" }}>{labelB}</strong> (orange)
+              — drag either box to move it. Drag a corner to resize both.
             </>
           }
         />
