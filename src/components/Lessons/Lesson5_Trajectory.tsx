@@ -157,7 +157,7 @@ export function Lesson5_Trajectory({
             <strong>Key insight:</strong> The truth diagram and ROC curve contain
             similar information, but the diagram preserves{" "}
             <em>prevalence</em> (the box shape), which the ROC curve discards.
-            This means it ignores predictive values, among other limitations.
+            This means the ROC curve ignores predictive values, among other limitations.
           </p>
         </div>
       }
