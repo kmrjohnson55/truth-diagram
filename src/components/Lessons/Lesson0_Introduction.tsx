@@ -95,10 +95,6 @@ export function Lesson0_Introduction({
             const leftLen = fp * s + axisOvershoot;
             const rightLen = tn * s + axisOvershoot;
 
-            // Midpoints for Test +/− labels
-            const tpMidY = cy - (tp * s) / 2;
-            const fnMidY = cy + (fn * s) / 2;
-
             // Bracket system
             const bracketColor = "#b45309";
             const bracketOffset = 18;

@@ -45,7 +45,7 @@ export function CostPanel({ costs, setCost, setCosts }: CostPanelProps) {
       </h3>
 
       <div className="grid grid-cols-2 gap-3">
-        {fields.map(({ key, label, abbr, color }) => (
+        {fields.map(({ key, abbr, color }) => (
           <div key={key}>
             <label className="block text-xs font-medium text-slate-600 mb-1">
               <span

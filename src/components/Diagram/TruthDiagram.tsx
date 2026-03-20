@@ -246,10 +246,6 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
         {/* Cost mode: show cost values inside each quadrant */}
         {costMode && subjectValues && (() => {
           const dv = displayValues;
-          const tpCenter = toSvg(-dv.fp / 2, dv.tp / 2, centerX, centerY, scale);
-          const fpCenter = toSvg(-dv.fp / 2, -dv.fn / 2, centerX, centerY, scale);
-          const fnCenter = toSvg(dv.tn / 2, -dv.fn / 2, centerX, centerY, scale);
-          const tnCenter = toSvg(dv.tn / 2, dv.tp / 2, centerX, centerY, scale);
           // In cost mode, values ARE the cost values; subjectValues are counts
           const cells: { key: keyof CellValues; label: string; pos: {x:number;y:number}; color: string }[] = [
             { key: "tp", label: "TP cost", pos: { x: centerX - (dv.fp * scale) / 2, y: centerY - (dv.tp * scale) / 2 }, color: CELL_COLORS.tp },

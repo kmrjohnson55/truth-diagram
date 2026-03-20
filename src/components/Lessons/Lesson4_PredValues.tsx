@@ -15,10 +15,6 @@ interface Lesson4Props extends LessonNavProps {
 }
 
 export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState }: Lesson4Props) {
-  const { tp, fp, fn, tn } = values;
-  const testPos = tp + fp;
-  const testNeg = fn + tn;
-
   const [showComparison, setShowComparison] = useState(false);
   const [activeView, setActiveView] = useState<"ppv" | "npv">("ppv");
 
