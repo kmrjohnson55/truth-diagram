@@ -4,7 +4,7 @@ import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { formatStat, formatRatio, computeStats, computeExpectedValues, computeChiSquare } from "../../utils/statistics";
 import { computeLayout, toSvg, computeAutoMagnification } from "../../utils/geometry";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
-import type { LessonNavProps } from "./lessonTypes";
+import type { LessonNavProps, CostState } from "./lessonTypes";
 
 interface CompareProps extends LessonNavProps {
   values: CellValues;
@@ -118,14 +118,29 @@ function DraggableSecondBox({
 
 /* ─── Editable 2×2 table for compare ─── */
 
+function CompactCostCell({ count, costPer, label, color }: { count: number; costPer: number; label: string; color: string }) {
+  const total = count * costPer;
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <span className="text-[9px] font-semibold" style={{ color }}>{label}<sub className="text-[7px]">cost</sub></span>
+      <span className="text-xs font-bold tabular-nums" style={{ color }}>{total.toLocaleString()}</span>
+      <span className="text-[8px] text-slate-400 tabular-nums">{count}&times;{costPer}</span>
+    </div>
+  );
+}
+
 function EditableCompactTable({
-  values, color, label, onChange, stats,
+  values, color, label, onChange, stats, costState,
 }: {
   values: CellValues; color: string; label: string;
   onChange: (key: keyof CellValues, val: number) => void;
   stats: DiagnosticStats;
+  costState: CostState;
 }) {
   const { tp, fp, fn, tn } = values;
+  const isCost = costState.costMode;
+  const costs = costState.costs;
+  const sub = isCost ? <sub className="text-[8px] text-orange-500">cost</sub> : null;
   const inputClass = "w-14 px-1 py-0.5 text-xs font-bold rounded text-center border";
   return (
     <div className="rounded-lg border p-2" style={{ borderColor: color + "40" }}>
@@ -136,30 +151,34 @@ function EditableCompactTable({
           <tr>
             <td className="p-0.5 text-slate-600 border-r border-slate-200">T+</td>
             <td className="p-0.5 text-center">
+              {isCost ? <CompactCostCell count={tp} costPer={costs.tp} label="TP" color="#16a34a" /> :
               <input type="number" min={0} value={tp} onChange={(e) => onChange("tp", parseInt(e.target.value) || 0)}
-                className={`${inputClass} text-green-700 bg-green-50 border-green-200`} />
+                className={`${inputClass} text-green-700 bg-green-50 border-green-200`} />}
             </td>
             <td className="p-0.5 text-center">
+              {isCost ? <CompactCostCell count={fp} costPer={costs.fp} label="FP" color="#ca8a04" /> :
               <input type="number" min={0} value={fp} onChange={(e) => onChange("fp", parseInt(e.target.value) || 0)}
-                className={`${inputClass} text-yellow-700 bg-yellow-50 border-yellow-200`} />
+                className={`${inputClass} text-yellow-700 bg-yellow-50 border-yellow-200`} />}
             </td>
           </tr>
           <tr>
             <td className="p-0.5 text-slate-600 border-r border-slate-200">T−</td>
             <td className="p-0.5 text-center">
+              {isCost ? <CompactCostCell count={fn} costPer={costs.fn} label="FN" color="#dc2626" /> :
               <input type="number" min={0} value={fn} onChange={(e) => onChange("fn", parseInt(e.target.value) || 0)}
-                className={`${inputClass} text-red-700 bg-red-50 border-red-200`} />
+                className={`${inputClass} text-red-700 bg-red-50 border-red-200`} />}
             </td>
             <td className="p-0.5 text-center">
+              {isCost ? <CompactCostCell count={tn} costPer={costs.tn} label="TN" color="#2563eb" /> :
               <input type="number" min={0} value={tn} onChange={(e) => onChange("tn", parseInt(e.target.value) || 0)}
-                className={`${inputClass} text-blue-700 bg-blue-50 border-blue-200`} />
+                className={`${inputClass} text-blue-700 bg-blue-50 border-blue-200`} />}
             </td>
           </tr>
         </tbody>
       </table>
       <div className="mt-1 text-xs text-slate-600 space-y-0.5">
-        <div>Sens: <strong>{formatStat(stats.sensitivity)}</strong> &nbsp; Spec: <strong>{formatStat(stats.specificity)}</strong></div>
-        <div>N = {tp + fp + fn + tn} &nbsp; Prevalence: {formatStat(stats.prevalence)}</div>
+        <div>Sens{sub}: <strong>{formatStat(stats.sensitivity)}</strong> &nbsp; Spec{sub}: <strong>{formatStat(stats.specificity)}</strong></div>
+        <div>N = {isCost ? (tp * costs.tp + fp * costs.fp + fn * costs.fn + tn * costs.tn).toLocaleString() : tp + fp + fn + tn} &nbsp; Prevalence{sub}: {formatStat(stats.prevalence)}</div>
       </div>
     </div>
   );
@@ -233,7 +252,7 @@ export function Lesson9_Compare({
   stats: _stats,
   setValue: _setValue,
   setValues: _setValues,
-  totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles,
+  totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState,
 }: CompareProps) {
   // Test A initializes from the shared app values
   const [valuesA, setValuesA] = useState<CellValues>(() => ({ ...values }));
@@ -250,8 +269,19 @@ export function Lesson9_Compare({
   const [labelA, setLabelA] = useState("Test A");
   const [labelB, setLabelB] = useState("Test B");
 
-  const statsA = useMemo(() => computeStats(valuesA), [valuesA]);
-  const statsB = useMemo(() => computeStats(valuesB), [valuesB]);
+  // Apply cost weighting when cost mode is on
+  const { costMode, costs } = costState;
+  const effectiveA = useMemo<CellValues>(() =>
+    costMode ? { tp: valuesA.tp * costs.tp, fp: valuesA.fp * costs.fp, fn: valuesA.fn * costs.fn, tn: valuesA.tn * costs.tn } : valuesA,
+    [valuesA, costs, costMode]
+  );
+  const effectiveB = useMemo<CellValues>(() =>
+    costMode ? { tp: valuesB.tp * costs.tp, fp: valuesB.fp * costs.fp, fn: valuesB.fn * costs.fn, tn: valuesB.tn * costs.tn } : valuesB,
+    [valuesB, costs, costMode]
+  );
+
+  const statsA = useMemo(() => computeStats(effectiveA), [effectiveA]);
+  const statsB = useMemo(() => computeStats(effectiveB), [effectiveB]);
 
   // When same proportions: editing Test A's cells updates Test B to match population
   const handleChangeA = useCallback((key: keyof CellValues, val: number) => {
@@ -330,18 +360,18 @@ export function Lesson9_Compare({
   // Auto-magnification for low prevalence
   const autoMag = useMemo(() => {
     const combined: CellValues = {
-      tp: Math.max(valuesA.tp, valuesB.tp),
-      fp: Math.max(valuesA.fp, valuesB.fp),
-      fn: Math.max(valuesA.fn, valuesB.fn),
-      tn: Math.max(valuesA.tn, valuesB.tn),
+      tp: Math.max(effectiveA.tp, effectiveB.tp),
+      fp: Math.max(effectiveA.fp, effectiveB.fp),
+      fn: Math.max(effectiveA.fn, effectiveB.fn),
+      tn: Math.max(effectiveA.tn, effectiveB.tn),
     };
     return computeAutoMagnification(combined);
-  }, [valuesA, valuesB]);
+  }, [effectiveA, effectiveB]);
   const yMag = magEnabled ? autoMag : 1;
 
   // Magnified values for display
-  const magA = useMemo<CellValues>(() => yMag <= 1 ? valuesA : { tp: Math.round(valuesA.tp * yMag), fp: valuesA.fp, fn: Math.round(valuesA.fn * yMag), tn: valuesA.tn }, [valuesA, yMag]);
-  const magB = useMemo<CellValues>(() => yMag <= 1 ? valuesB : { tp: Math.round(valuesB.tp * yMag), fp: valuesB.fp, fn: Math.round(valuesB.fn * yMag), tn: valuesB.tn }, [valuesB, yMag]);
+  const magA = useMemo<CellValues>(() => yMag <= 1 ? effectiveA : { tp: Math.round(effectiveA.tp * yMag), fp: effectiveA.fp, fn: Math.round(effectiveA.fn * yMag), tn: effectiveA.tn }, [effectiveA, yMag]);
+  const magB = useMemo<CellValues>(() => yMag <= 1 ? effectiveB : { tp: Math.round(effectiveB.tp * yMag), fp: effectiveB.fp, fn: Math.round(effectiveB.fn * yMag), tn: effectiveB.tn }, [effectiveB, yMag]);
 
   // Tight zoom: fit closely around both magnified boxes
   const fixedLayout = useMemo(() => {
@@ -367,7 +397,7 @@ export function Lesson9_Compare({
     <LessonLayout
       meta={{ number: 7, title: "Compare Two Tests", subtitle: "Same population, different tests — which is better?" }}
       totalLessons={totalLessons} onPrev={onPrev} onNext={onNext} onHome={onHome} onGoTo={onGoTo}
-      lessonTitles={lessonTitles} values={valuesA}
+      lessonTitles={lessonTitles} costState={costState} values={effectiveA}
       diagramFooter={
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
@@ -378,8 +408,8 @@ export function Lesson9_Compare({
             </label>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <EditableCompactTable values={valuesA} color="#2563eb" label={labelA} onChange={handleChangeA} stats={statsA} />
-            <EditableCompactTable values={valuesB} color="#ea580c" label={labelB} onChange={handleChangeB} stats={statsB} />
+            <EditableCompactTable values={valuesA} color="#2563eb" label={labelA} onChange={handleChangeA} stats={statsA} costState={costState} />
+            <EditableCompactTable values={valuesB} color="#ea580c" label={labelB} onChange={handleChangeB} stats={statsB} costState={costState} />
           </div>
           <select value="" onChange={(e) => loadPreset(parseInt(e.target.value))}
             className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md bg-white text-slate-800">
@@ -402,7 +432,7 @@ export function Lesson9_Compare({
       diagram={
         <TruthDiagram
           values={magA}
-          onDrag={(newMagValues) => {
+          onDrag={costState.costMode ? undefined : (newMagValues) => {
             // Convert magnified drag values back to real values
             if (yMag > 1) {
               handleDragA({ tp: Math.round(newMagValues.tp / yMag), fp: newMagValues.fp, fn: Math.round(newMagValues.fn / yMag), tn: newMagValues.tn });
@@ -420,10 +450,10 @@ export function Lesson9_Compare({
             tn: Math.max(magA.tn, magB.tn),
           }}
           tickAxisExtent={{
-            tp: Math.max(valuesA.tp, valuesB.tp),
-            fp: Math.max(valuesA.fp, valuesB.fp),
-            fn: Math.max(valuesA.fn, valuesB.fn),
-            tn: Math.max(valuesA.tn, valuesB.tn),
+            tp: Math.max(effectiveA.tp, effectiveB.tp),
+            fp: Math.max(effectiveA.fp, effectiveB.fp),
+            fn: Math.max(effectiveA.fn, effectiveB.fn),
+            tn: Math.max(effectiveA.tn, effectiveB.tn),
           }}
           renderExtraSvg={(layout) => {
             const ulA = toSvg(-magA.fp, magA.tp, layout.centerX, layout.centerY, layout.scale);
@@ -527,8 +557,8 @@ export function Lesson9_Compare({
               </tr></thead>
               <tbody>
                 <CompareRow label="Youden's Index (J)" valueA={formatRatio(youdenIndex(statsA))} valueB={formatRatio(youdenIndex(statsB))} tooltip="Sensitivity + Specificity − 1. Range 0 (worthless) to 1 (perfect). 0.5 = moderate, 0.8+ = good." />
-                <CompareRow label="Diagnostic OR" valueA={formatRatio(diagnosticOddsRatio(valuesA))} valueB={formatRatio(diagnosticOddsRatio(valuesB))} tooltip="(TP×TN)/(FP×FN). Ratio of odds of positive result in diseased vs healthy. 1 = worthless, 10 = moderate, 100+ = strong." />
-                <CompareRow label="Chi-Square" valueA={formatRatio((() => { const e = computeExpectedValues(valuesA); return computeChiSquare(valuesA, e); })())} valueB={formatRatio((() => { const e = computeExpectedValues(valuesB); return computeChiSquare(valuesB, e); })())} tooltip="Tests whether the test discriminates better than chance. ≥3.84 = significant (p<0.05), ≥6.63 = p<0.01." />
+                <CompareRow label="Diagnostic OR" valueA={formatRatio(diagnosticOddsRatio(effectiveA))} valueB={formatRatio(diagnosticOddsRatio(effectiveB))} tooltip="(TP×TN)/(FP×FN). Ratio of odds of positive result in diseased vs healthy. 1 = worthless, 10 = moderate, 100+ = strong." />
+                <CompareRow label="Chi-Square" valueA={formatRatio((() => { const e = computeExpectedValues(effectiveA); return computeChiSquare(effectiveA, e); })())} valueB={formatRatio((() => { const e = computeExpectedValues(effectiveB); return computeChiSquare(effectiveB, e); })())} tooltip="Tests whether the test discriminates better than chance. ≥3.84 = significant (p<0.05), ≥6.63 = p<0.01." />
                 {(() => {
                   const nri = netReclassificationImprovement(statsA, statsB);
                   const nriStr = isNaN(nri) ? "N/A" : (nri > 0 ? "+" : "") + (nri * 100).toFixed(1) + "%";

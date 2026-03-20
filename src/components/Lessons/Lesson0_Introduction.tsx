@@ -55,6 +55,7 @@ export function Lesson0_Introduction({
   onHome,
   onGoTo,
   lessonTitles,
+  costState,
 }: IntroProps) {
   return (
     <LessonLayout
@@ -69,10 +70,11 @@ export function Lesson0_Introduction({
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
+      costState={costState}
       diagram={
         <TruthDiagram
           values={values}
-          onDrag={setValues}
+          onDrag={costState.costMode ? undefined : setValues}
           overlays={[]}
           hideTickAnnotation
           renderExtraSvg={(layout) => {

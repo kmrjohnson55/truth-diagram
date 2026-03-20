@@ -14,7 +14,7 @@ interface Lesson3Props extends LessonNavProps {
   setValues: (v: CellValues) => void;
 }
 
-export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles }: Lesson3Props) {
+export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState }: Lesson3Props) {
   const [activeView, setActiveView] = useState<"sensitivity" | "specificity">("sensitivity");
   const [showLowPrev, setShowLowPrev] = useState(false);
 
@@ -32,6 +32,8 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
   const displayValues = showLowPrev ? lowPrevValues : values;
   const displayStats = showLowPrev ? lowPrevStats : stats;
 
+  const sub = costState.costMode ? <sub className="text-[9px] text-orange-500">cost</sub> : null;
+
   return (
     <LessonLayout
       meta={{ number: 2, title: "Sensitivity & Specificity", subtitle: "How well does the test detect disease and health?" }}
@@ -41,10 +43,11 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
+      costState={costState}
       values={values}
       diagramFooter={
         <div className="space-y-3">
-          {!showLowPrev && <TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
+          {!showLowPrev && <TwoByTwoTable values={values} setValue={setValue} setValues={setValues} costState={costState} />}
           {/* Prevalence toggle — prominent, outside the key insight */}
           <label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer select-none">
             <input type="checkbox" checked={showLowPrev} onChange={(e) => setShowLowPrev(e.target.checked)}
@@ -58,7 +61,7 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
       diagram={
         <TruthDiagram
           values={displayValues}
-          onDrag={showLowPrev ? undefined : setValues}
+          onDrag={showLowPrev || costState.costMode ? undefined : setValues}
           overlays={[activeView]}
           belowDiagramText={
             <span className="text-xs">
@@ -87,7 +90,7 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
-            <div className="text-xs font-semibold">Sensitivity</div>
+            <div className="text-xs font-semibold">Sensitivity{sub}</div>
             <div className="text-sm font-bold tabular-nums">{formatStat(displayStats.sensitivity)}</div>
           </button>
           <button
@@ -98,7 +101,7 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
-            <div className="text-xs font-semibold">Specificity</div>
+            <div className="text-xs font-semibold">Specificity{sub}</div>
             <div className="text-sm font-bold tabular-nums">{formatStat(displayStats.specificity)}</div>
           </button>
         </div>
@@ -110,14 +113,13 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
 
         {/* Sensitivity section — always visible */}
         <div className={activeView !== "sensitivity" ? "opacity-40 transition-opacity" : "transition-opacity"}>
-          <h3 className="text-sm font-bold text-green-700 uppercase tracking-wide mb-1">Sensitivity</h3>
+          <h3 className="text-sm font-bold text-green-700 uppercase tracking-wide mb-1">Sensitivity{sub}</h3>
           <p className="text-xs text-slate-600 leading-relaxed">
-            The proportion of diseased patients who test positive.
-            On the diagram, this is the fraction of the vertical axis (left side of the box) that lies <em>above</em> the origin.
+            The proportion of diseased patients who test positive. On the diagram, this is the fraction of the vertical axis (left side of the box) that lies above the origin.
           </p>
           <div className="mt-2 bg-green-50 rounded-lg p-3 space-y-1">
             <div className="text-sm font-mono text-green-800">
-              Sensitivity = <span style={{ color: CELL_COLORS.tp }}>TP</span> / (<span style={{ color: CELL_COLORS.tp }}>TP</span> + <span style={{ color: CELL_COLORS.fn }}>FN</span>)
+              Sensitivity{sub} = <span style={{ color: CELL_COLORS.tp }}>TP{sub}</span> / (<span style={{ color: CELL_COLORS.tp }}>TP{sub}</span> + <span style={{ color: CELL_COLORS.fn }}>FN{sub}</span>)
             </div>
             <div className="text-sm font-mono text-green-800">
               = <span style={{ color: CELL_COLORS.tp }}>{displayValues.tp}</span> / (<span style={{ color: CELL_COLORS.tp }}>{displayValues.tp}</span> + <span style={{ color: CELL_COLORS.fn }}>{displayValues.fn}</span>) = {displayValues.tp} / {displayValues.tp + displayValues.fn}
@@ -128,14 +130,13 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
 
         {/* Specificity section — always visible */}
         <div className={activeView !== "specificity" ? "opacity-40 transition-opacity" : "transition-opacity"}>
-          <h3 className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-1">Specificity</h3>
+          <h3 className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-1">Specificity{sub}</h3>
           <p className="text-xs text-slate-600 leading-relaxed">
-            The proportion of healthy patients who test negative.
-            On the diagram, this is the fraction of the horizontal axis (bottom of the box) that lies to the <em>right</em> of the origin.
+            The proportion of healthy patients who test negative. On the diagram, this is the fraction of the horizontal axis (bottom of the box) that lies to the right of the origin.
           </p>
           <div className="mt-2 bg-blue-50 rounded-lg p-3 space-y-1">
             <div className="text-sm font-mono text-blue-800">
-              Specificity = <span style={{ color: CELL_COLORS.tn }}>TN</span> / (<span style={{ color: CELL_COLORS.tn }}>TN</span> + <span style={{ color: CELL_COLORS.fp }}>FP</span>)
+              Specificity{sub} = <span style={{ color: CELL_COLORS.tn }}>TN{sub}</span> / (<span style={{ color: CELL_COLORS.tn }}>TN{sub}</span> + <span style={{ color: CELL_COLORS.fp }}>FP{sub}</span>)
             </div>
             <div className="text-sm font-mono text-blue-800">
               = <span style={{ color: CELL_COLORS.tn }}>{displayValues.tn}</span> / (<span style={{ color: CELL_COLORS.tn }}>{displayValues.tn}</span> + <span style={{ color: CELL_COLORS.fp }}>{displayValues.fp}</span>) = {displayValues.tn} / {displayValues.tn + displayValues.fp}

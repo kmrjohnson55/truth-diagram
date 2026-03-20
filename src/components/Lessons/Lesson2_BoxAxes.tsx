@@ -13,7 +13,8 @@ interface Lesson2Props extends LessonNavProps {
   setValues: (v: CellValues) => void;
 }
 
-export function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles }: Lesson2Props) {
+export function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState }: Lesson2Props) {
+  const sub = costState.costMode ? <sub className="text-[9px] text-orange-500">cost</sub> : null;
   const { tp, fp, fn, tn } = values;
   const diseased = tp + fn;
   const healthy = fp + tn;
@@ -34,8 +35,9 @@ export function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLesso
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
+      costState={costState}
       values={values}
-      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
+      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} costState={costState} />}
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
@@ -48,7 +50,7 @@ export function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLesso
       diagram={
         <TruthDiagram
           values={values}
-          onDrag={setValues}
+          onDrag={costState.costMode ? undefined : setValues}
           belowDiagramText={
             <>
               <strong>Try it:</strong> Drag the box to move it and watch the four values change.
@@ -119,9 +121,9 @@ export function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLesso
             <div className="flex justify-between items-center">
               <span className="text-slate-600">Vertical side:</span>
               <span className="font-semibold">
-                <span style={{ color: CELL_COLORS.tp }}>TP</span>
+                <span style={{ color: CELL_COLORS.tp }}>TP{sub}</span>
                 {" + "}
-                <span style={{ color: CELL_COLORS.fn }}>FN</span>
+                <span style={{ color: CELL_COLORS.fn }}>FN{sub}</span>
                 {" = "}
                 <span style={{ color: CELL_COLORS.tp }}>{tp}</span>
                 {" + "}
@@ -133,9 +135,9 @@ export function Lesson2_BoxAxes({ values, stats, setValue, setValues, totalLesso
             <div className="flex justify-between items-center">
               <span className="text-slate-600">Horizontal side:</span>
               <span className="font-semibold">
-                <span style={{ color: CELL_COLORS.fp }}>FP</span>
+                <span style={{ color: CELL_COLORS.fp }}>FP{sub}</span>
                 {" + "}
-                <span style={{ color: CELL_COLORS.tn }}>TN</span>
+                <span style={{ color: CELL_COLORS.tn }}>TN{sub}</span>
                 {" = "}
                 <span style={{ color: CELL_COLORS.fp }}>{fp}</span>
                 {" + "}

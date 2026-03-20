@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import type { CellValues } from "../../utils/statistics";
+import { CELL_COLORS } from "../../utils/colors";
 import { computeLayout, toSvg, computeAutoMagnification } from "../../utils/geometry";
 import { Axes } from "./Axes";
 import { SubjectBox } from "./SubjectBox";
@@ -27,6 +28,10 @@ interface TruthDiagramProps {
   yMag?: number;
   /** Hide the "1 tick = N" annotation near the origin */
   hideTickAnnotation?: boolean;
+  /** When true, diagram is showing cost-weighted values */
+  costMode?: boolean;
+  /** Original subject counts (passed when costMode is true, for label display) */
+  subjectValues?: CellValues;
 }
 
 const SVG_WIDTH = 560;
@@ -36,7 +41,7 @@ const CORNER_HIT_RADIUS = 12;
 
 type DragMode = "box" | "corner-ul" | "corner-ur" | "corner-ll" | "corner-lr" | null;
 
-export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText, extraMargin = 0, fixedLayout, axisExtent, tickAxisExtent, yMag: yMagProp, hideTickAnnotation }: TruthDiagramProps) {
+export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText, extraMargin = 0, fixedLayout, axisExtent, tickAxisExtent, yMag: yMagProp, hideTickAnnotation, costMode, subjectValues }: TruthDiagramProps) {
   // Auto-compute magnification when not explicitly set
   const autoMag = computeAutoMagnification(values);
   const [magEnabled, setMagEnabled] = useState(true);
@@ -238,6 +243,37 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
           scale={scale}
         />
 
+        {/* Cost mode: show cost values inside each quadrant */}
+        {costMode && subjectValues && (() => {
+          const dv = displayValues;
+          const tpCenter = toSvg(-dv.fp / 2, dv.tp / 2, centerX, centerY, scale);
+          const fpCenter = toSvg(-dv.fp / 2, -dv.fn / 2, centerX, centerY, scale);
+          const fnCenter = toSvg(dv.tn / 2, -dv.fn / 2, centerX, centerY, scale);
+          const tnCenter = toSvg(dv.tn / 2, dv.tp / 2, centerX, centerY, scale);
+          // In cost mode, values ARE the cost values; subjectValues are counts
+          const cells: { key: keyof CellValues; label: string; pos: {x:number;y:number}; color: string }[] = [
+            { key: "tp", label: "TP cost", pos: { x: centerX - (dv.fp * scale) / 2, y: centerY - (dv.tp * scale) / 2 }, color: CELL_COLORS.tp },
+            { key: "fp", label: "FP cost", pos: { x: centerX - (dv.fp * scale) / 2, y: centerY + (dv.fn * scale) / 2 }, color: CELL_COLORS.fp },
+            { key: "fn", label: "FN cost", pos: { x: centerX + (dv.tn * scale) / 2, y: centerY + (dv.fn * scale) / 2 }, color: CELL_COLORS.fn },
+            { key: "tn", label: "TN cost", pos: { x: centerX + (dv.tn * scale) / 2, y: centerY - (dv.tp * scale) / 2 }, color: CELL_COLORS.tn },
+          ];
+          return (
+            <g className="cost-labels">
+              {cells.map(({ key, label, pos, color }) => {
+                const costVal = values[key];
+                return (
+                  <g key={key}>
+                    <text x={pos.x} y={pos.y - 6} textAnchor="middle" fontSize={9} fontWeight={600} fill={color} opacity={0.8}
+                      style={{ userSelect: "none" }}>{label}</text>
+                    <text x={pos.x} y={pos.y + 8} textAnchor="middle" fontSize={12} fontWeight={700} fill={color}
+                      style={{ userSelect: "none" }}>{costVal.toLocaleString()}</text>
+                  </g>
+                );
+              })}
+            </g>
+          );
+        })()}
+
         {overlays.length > 0 && (
           <StatOverlays
             values={displayValues}
@@ -297,6 +333,13 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
               className="accent-amber-600" />
             {magEnabled ? `Note: ↕ ${yMag}× vertical magnification` : "Magnify vertical axis"}
           </label>
+        </div>
+      )}
+
+      {/* Cost mode indicator */}
+      {costMode && (
+        <div className="text-xs text-orange-700 font-semibold text-center mt-1 bg-orange-50 rounded px-2 py-0.5 mx-auto w-fit">
+          Showing costs (count &times; cost/subject)
         </div>
       )}
 

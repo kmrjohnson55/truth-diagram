@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { TruthDiagram } from "./components/Diagram/TruthDiagram";
 import { InputPanel } from "./components/UI/InputPanel";
 import { StatsPanel } from "./components/UI/StatsPanel";
+import { CostPanel } from "./components/UI/CostPanel";
 import { Lesson0_Introduction } from "./components/Lessons/Lesson0_Introduction";
 import { Lesson2_BoxAxes } from "./components/Lessons/Lesson2_BoxAxes";
 import { Lesson3_SensSpec } from "./components/Lessons/Lesson3_SensSpec";
@@ -12,6 +13,8 @@ import { Lesson7_ChiSquare } from "./components/Lessons/Lesson7_ChiSquare";
 import { Lesson8_Sandbox } from "./components/Lessons/Lesson8_Sandbox";
 import { Lesson9_Compare } from "./components/Lessons/Lesson9_Compare";
 import { useDiagramState } from "./hooks/useDiagramState";
+import { computeStats } from "./utils/statistics";
+import type { CostWeights, CostState } from "./components/Lessons/lessonTypes";
 
 const TOTAL_LESSONS = 8;
 
@@ -26,23 +29,72 @@ const LESSON_TITLES = [
   "Sandbox",
 ];
 
-function Header() {
+function CostToggle({ costMode, setCostMode }: { costMode: boolean; setCostMode: (on: boolean) => void }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  return (
+    <div className="relative flex items-center gap-1.5">
+      <button
+        onClick={() => setCostMode(!costMode)}
+        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all border ${
+          costMode
+            ? "bg-orange-100 text-orange-800 border-orange-300"
+            : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+        }`}
+      >
+        <span className={`w-2 h-2 rounded-full ${costMode ? "bg-orange-500" : "bg-slate-300"}`} />
+        {costMode ? "Cost Mode ON" : "Cost Mode"}
+      </button>
+      <span
+        className="inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold text-orange-400 bg-orange-50 border border-orange-200 rounded-full cursor-help select-none"
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+      >?</span>
+      {showTooltip && (
+        <div
+          className="absolute right-0 top-full mt-1 z-50 w-72 p-3 text-xs text-slate-700 bg-white border border-slate-200 rounded-lg shadow-lg leading-relaxed"
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+        >
+          <p className="font-semibold text-orange-700 mb-1">Cost Mode <span className="text-[9px] bg-orange-100 text-orange-600 px-1 py-0.5 rounded">BETA</span></p>
+          <p className="mb-1.5">
+            Multiplies each cell count by a per-subject cost, then redraws the
+            diagram and recalculates all statistics using cost-weighted values.
+          </p>
+          <p className="mb-1.5">
+            The resulting statistics (sensitivity<sub>cost</sub>, PPV<sub>cost</sub>, etc.)
+            are <strong>cost-weighted analogs</strong> of the standard measures &mdash;
+            they reflect the relative economic impact rather than subject counts.
+          </p>
+          <p className="text-slate-500 italic">
+            This is an experimental feature. Cost-weighted statistics are not
+            standard epidemiological measures and should be interpreted with care.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Header({ costMode, setCostMode, hideCostToggle }: { costMode: boolean; setCostMode: (on: boolean) => void; hideCostToggle?: boolean }) {
   return (
     <header className="bg-white border-b border-slate-200 px-6 py-3">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-xl font-bold text-slate-800">Johnson Truth Diagram</h1>
-        <p className="text-xs text-slate-600">
-          Interactive 2&times;2 diagnostic testing visualization
-        </p>
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">Johnson Truth Diagram</h1>
+          <p className="text-xs text-slate-600">
+            Interactive 2&times;2 diagnostic testing visualization
+          </p>
+        </div>
+        {!hideCostToggle && <CostToggle costMode={costMode} setCostMode={setCostMode} />}
       </div>
     </header>
   );
 }
 
-function AppShell({ children }: { children: React.ReactNode }) {
+function AppShell({ children, costMode, setCostMode, hideCostToggle }: { children: React.ReactNode; costMode: boolean; setCostMode: (on: boolean) => void; hideCostToggle?: boolean }) {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header />
+      <Header costMode={costMode} setCostMode={setCostMode} hideCostToggle={hideCostToggle} />
       <div className="flex-1 flex flex-col">{children}</div>
     </div>
   );
@@ -50,7 +102,29 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
 function App() {
   const { values, stats, setValues, setValue } = useDiagramState();
-  const [currentLesson, setCurrentLesson] = useState<number>(-1); // -1 = introduction
+  const [currentLesson, setCurrentLesson] = useState<number>(-1);
+
+  // Cost state
+  const [costMode, setCostMode] = useState(false);
+  const [costs, setCosts] = useState<CostWeights>({ tp: 1, fp: 1, fn: 10, tn: 0 });
+  const setCost = useCallback(
+    (key: keyof CostWeights, val: number) => setCosts((prev) => ({ ...prev, [key]: val })),
+    []
+  );
+
+  // Cost-weighted values — these become THE cell values when cost mode is on
+  const effectiveValues = useMemo(() =>
+    costMode
+      ? { tp: values.tp * costs.tp, fp: values.fp * costs.fp, fn: values.fn * costs.fn, tn: values.tn * costs.tn }
+      : values,
+    [values, costs, costMode]
+  );
+  const effectiveStats = useMemo(() => computeStats(effectiveValues), [effectiveValues]);
+
+  const costState: CostState = {
+    costMode, costs, setCostMode, setCosts, setCost,
+    subjectValues: costMode ? values : undefined,
+  };
 
   const goHome = () => setCurrentLesson(0);
   const goPrev = () => setCurrentLesson((n) => Math.max(1, n - 1));
@@ -63,13 +137,14 @@ function App() {
     onHome: goHome,
     onGoTo: setCurrentLesson,
     lessonTitles: LESSON_TITLES,
+    costState,
   };
-  const dataProps = { values, stats, setValue, setValues };
+  const dataProps = { values: effectiveValues, stats: effectiveStats, setValue, setValues };
 
   // Introduction
   if (currentLesson === -1) {
     return (
-      <AppShell>
+      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
         <Lesson0_Introduction key="intro" {...navProps} values={values} stats={stats} setValues={setValues} />
       </AppShell>
     );
@@ -77,47 +152,47 @@ function App() {
   // Lesson 1: Box & Axes
   if (currentLesson === 1) {
     return (
-      <AppShell>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson2_BoxAxes key="lesson1" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
-  // Lesson 2: Sensitivity & Specificity (formerly Lesson 3)
+  // Lesson 2: Sensitivity & Specificity
   if (currentLesson === 2) {
     return (
-      <AppShell>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson3_SensSpec key="lesson2" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
-  // Lesson 3: Predictive Values (formerly Lesson 4)
+  // Lesson 3: Predictive Values
   if (currentLesson === 3) {
     return (
-      <AppShell>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson4_PredValues key="lesson3" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
-  // Lesson 4: ROC Curves (formerly Lesson 5)
+  // Lesson 4: ROC Curves
   if (currentLesson === 4) {
     return (
-      <AppShell>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson5_Trajectory key="lesson4" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
-  // Lesson 5: Likelihood Ratios & Bayes (formerly Lesson 6)
+  // Lesson 5: Likelihood Ratios & Bayes
   if (currentLesson === 5) {
     return (
-      <AppShell>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson6_LikelihoodRatios key="lesson5" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
-  // Lesson 6: Chi-Square Test (formerly Lesson 7)
+  // Lesson 6: Chi-Square Test
   if (currentLesson === 6) {
     return (
-      <AppShell>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson7_ChiSquare key="lesson6" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -125,7 +200,7 @@ function App() {
   // Lesson 7: Compare Two Tests
   if (currentLesson === 7) {
     return (
-      <AppShell>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson9_Compare key="lesson7" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -133,7 +208,7 @@ function App() {
   // Lesson 8: Sandbox
   if (currentLesson === 8) {
     return (
-      <AppShell>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson8_Sandbox key="lesson8" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -142,7 +217,7 @@ function App() {
   // Home view
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header />
+      <Header costMode={costMode} setCostMode={setCostMode} />
       <main className="max-w-7xl mx-auto px-6 py-6">
         {/* Introduction button */}
         <div className="mb-4">
@@ -193,44 +268,21 @@ function App() {
           </div>
         </div>
 
+        {/* Cost mode banner */}
+        {costMode && (
+          <div className="mb-4 bg-orange-50 border border-orange-200 rounded-xl p-3 text-xs text-orange-800">
+            <strong>Cost mode active.</strong> Diagram dimensions and statistics reflect cost-weighted values (count &times; cost per subject).
+          </div>
+        )}
+
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 min-w-0">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            <div className={`bg-white rounded-xl shadow-sm border p-4 ${costMode ? "border-orange-200" : "border-slate-200"}`}>
               <TruthDiagram
-                values={values}
-                onDrag={setValues}
-                renderExtraSvg={(layout) => {
-                  const { centerX: cx, centerY: cy, scale: s } = layout;
-                  const { tp: t, fp: f, fn: n, tn: r } = values;
-                  // Box corners in SVG coords
-                  const ulY = cy - t * s;
-                  const llY = cy + n * s;
-                  const ulX = cx - f * s;
-                  const urX = cx + r * s;
-                  const bracketColor = "#b45309"; // burnt orange
-                  const bracketOffset = 18;
-                  const bracketWidth = 6;
-                  // Vertical curly bracket (right side) — "Diseased"
-                  const vx = urX + bracketOffset;
-                  const vmid = (ulY + llY) / 2;
-                  const vPath = `M${vx - bracketWidth},${ulY} Q${vx},${ulY} ${vx},${ulY + 8} L${vx},${vmid - 6} Q${vx},${vmid} ${vx + bracketWidth},${vmid} Q${vx},${vmid} ${vx},${vmid + 6} L${vx},${llY - 8} Q${vx},${llY} ${vx - bracketWidth},${llY}`;
-                  // Horizontal curly bracket (below) — "Healthy"
-                  const hy = llY + bracketOffset;
-                  const hmid = (ulX + urX) / 2;
-                  const hPath = `M${ulX},${hy - bracketWidth} Q${ulX},${hy} ${ulX + 8},${hy} L${hmid - 6},${hy} Q${hmid},${hy} ${hmid},${hy + bracketWidth} Q${hmid},${hy} ${hmid + 6},${hy} L${urX - 8},${hy} Q${urX},${hy} ${urX},${hy - bracketWidth}`;
-                  return (
-                    <g>
-                      <path d={vPath} fill="none" stroke={bracketColor} strokeWidth={1.5} />
-                      <text x={vx + bracketWidth + 4} y={vmid + 4} fontSize={11} fontWeight={600} fill={bracketColor}>
-                        Diseased
-                      </text>
-                      <path d={hPath} fill="none" stroke={bracketColor} strokeWidth={1.5} />
-                      <text x={hmid} y={hy + bracketWidth + 14} textAnchor="middle" fontSize={11} fontWeight={600} fill={bracketColor}>
-                        Healthy
-                      </text>
-                    </g>
-                  );
-                }}
+                values={effectiveValues}
+                onDrag={costMode ? undefined : setValues}
+                costMode={costMode}
+                subjectValues={costMode ? values : undefined}
               />
             </div>
           </div>
@@ -242,8 +294,18 @@ function App() {
                 setValues={setValues}
               />
             </div>
+            {costMode && (
+              <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-4">
+                <CostPanel costs={costs} setCost={setCost} setCosts={setCosts} />
+              </div>
+            )}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-              <StatsPanel stats={stats} />
+              <StatsPanel
+                stats={stats}
+                costMode={costMode}
+                values={values}
+                costs={costs}
+              />
             </div>
           </div>
         </div>

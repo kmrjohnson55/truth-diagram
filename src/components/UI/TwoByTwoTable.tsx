@@ -1,14 +1,87 @@
 import type { CellValues } from "../../utils/statistics";
+import type { CostState } from "../Lessons/lessonTypes";
 import { generalPresets, clinicalPresets, presets } from "../../utils/presets";
 
 interface TwoByTwoTableProps {
   values: CellValues;
   setValue: (key: keyof CellValues, val: number) => void;
   setValues: (v: CellValues) => void;
+  costState?: CostState;
 }
 
-export function TwoByTwoTable({ values, setValue, setValues }: TwoByTwoTableProps) {
+function CostCell({ count, costPer, label, color }: { count: number; costPer: number; label: string; color: string }) {
+  const total = count * costPer;
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <span className="text-[10px] font-semibold" style={{ color }}>{label}<sub className="text-[8px]">cost</sub></span>
+      <span className="text-xs font-bold tabular-nums" style={{ color }}>{total.toLocaleString()}</span>
+      <span className="text-[9px] text-slate-400 tabular-nums">{count}&times;{costPer}</span>
+    </div>
+  );
+}
+
+export function TwoByTwoTable({ values, setValue, setValues, costState }: TwoByTwoTableProps) {
+  const costMode = costState?.costMode ?? false;
+  const costs = costState?.costs ?? { tp: 1, fp: 1, fn: 1, tn: 1 };
+  // In cost mode, values are already cost-weighted; subjectValues has raw counts
+  const sv = costState?.subjectValues;
   const { tp, fp, fn, tn } = values;
+
+  if (costMode && sv) {
+    // values are cost totals; sv has raw subject counts
+    const diseased = tp + fn;
+    const healthy = fp + tn;
+    const testPos = tp + fp;
+    const testNeg = fn + tn;
+    const total = tp + fp + fn + tn;
+
+    return (
+      <div className="space-y-3">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr>
+                <th className="p-1.5"></th>
+                <th className="p-1.5 text-center font-semibold text-orange-700 border-b-2 border-orange-200 text-xs">Disease +</th>
+                <th className="p-1.5 text-center font-semibold text-orange-700 border-b-2 border-orange-200 text-xs">Disease &minus;</th>
+                <th className="p-1.5 text-center font-semibold text-orange-700 border-b-2 border-orange-100 text-xs">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="p-1.5 font-semibold text-slate-600 border-r-2 border-orange-200 text-xs">Test +</td>
+                <td className="p-1.5 text-center">
+                  <CostCell count={sv.tp} costPer={costs.tp} label="TP" color="#16a34a" />
+                </td>
+                <td className="p-1.5 text-center">
+                  <CostCell count={sv.fp} costPer={costs.fp} label="FP" color="#ca8a04" />
+                </td>
+                <td className="p-1.5 text-center text-orange-700 font-medium text-xs">{testPos.toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td className="p-1.5 font-semibold text-slate-600 border-r-2 border-orange-200 text-xs">Test &minus;</td>
+                <td className="p-1.5 text-center">
+                  <CostCell count={sv.fn} costPer={costs.fn} label="FN" color="#dc2626" />
+                </td>
+                <td className="p-1.5 text-center">
+                  <CostCell count={sv.tn} costPer={costs.tn} label="TN" color="#2563eb" />
+                </td>
+                <td className="p-1.5 text-center text-orange-700 font-medium text-xs">{testNeg.toLocaleString()}</td>
+              </tr>
+              <tr className="border-t-2 border-orange-200">
+                <td className="p-1.5 font-semibold text-slate-600 text-xs">Total</td>
+                <td className="p-1.5 text-center text-orange-700 font-medium text-xs">{diseased.toLocaleString()}</td>
+                <td className="p-1.5 text-center text-orange-700 font-medium text-xs">{healthy.toLocaleString()}</td>
+                <td className="p-1.5 text-center text-orange-800 font-bold text-xs">{total.toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // Standard (subject count) mode
   const diseased = tp + fn;
   const healthy = fp + tn;
   const testPos = tp + fp;
@@ -17,7 +90,6 @@ export function TwoByTwoTable({ values, setValue, setValues }: TwoByTwoTableProp
 
   return (
     <div className="space-y-3">
-      {/* 2×2 Table with editable cells */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
           <thead>
@@ -32,12 +104,14 @@ export function TwoByTwoTable({ values, setValue, setValues }: TwoByTwoTableProp
             <tr>
               <td className="p-1.5 font-semibold text-slate-600 border-r-2 border-slate-200 text-xs">Test +</td>
               <td className="p-1 text-center">
+                <span className="text-[10px] font-semibold text-green-600 block">TP</span>
                 <input type="number" min={0} value={tp}
                   onChange={(e) => setValue("tp", parseInt(e.target.value) || 0)}
                   className="w-16 px-1.5 py-0.5 text-sm font-bold text-green-700 bg-green-50 border border-green-200 rounded text-center"
                 />
               </td>
               <td className="p-1 text-center">
+                <span className="text-[10px] font-semibold text-yellow-600 block">FP</span>
                 <input type="number" min={0} value={fp}
                   onChange={(e) => setValue("fp", parseInt(e.target.value) || 0)}
                   className="w-16 px-1.5 py-0.5 text-sm font-bold text-yellow-700 bg-yellow-50 border border-yellow-200 rounded text-center"
@@ -48,12 +122,14 @@ export function TwoByTwoTable({ values, setValue, setValues }: TwoByTwoTableProp
             <tr>
               <td className="p-1.5 font-semibold text-slate-600 border-r-2 border-slate-200 text-xs">Test &minus;</td>
               <td className="p-1 text-center">
+                <span className="text-[10px] font-semibold text-red-600 block">FN</span>
                 <input type="number" min={0} value={fn}
                   onChange={(e) => setValue("fn", parseInt(e.target.value) || 0)}
                   className="w-16 px-1.5 py-0.5 text-sm font-bold text-red-700 bg-red-50 border border-red-200 rounded text-center"
                 />
               </td>
               <td className="p-1 text-center">
+                <span className="text-[10px] font-semibold text-blue-600 block">TN</span>
                 <input type="number" min={0} value={tn}
                   onChange={(e) => setValue("tn", parseInt(e.target.value) || 0)}
                   className="w-16 px-1.5 py-0.5 text-sm font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded text-center"

@@ -14,7 +14,7 @@ interface Lesson4Props extends LessonNavProps {
   setValues: (v: CellValues) => void;
 }
 
-export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles }: Lesson4Props) {
+export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState }: Lesson4Props) {
   const { tp, fp, fn, tn } = values;
   const testPos = tp + fp;
   const testNeg = fn + tn;
@@ -35,6 +35,8 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
 
   const displayValues = showComparison ? lowPrevValues : values;
   const displayStats = showComparison ? lowPrevStats : stats;
+
+  const sub = costState.costMode ? <sub className="text-[9px] text-orange-500">cost</sub> : null;
   const dTp = displayValues.tp;
   const dFp = displayValues.fp;
   const dFn = displayValues.fn;
@@ -49,6 +51,7 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
+      costState={costState}
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
@@ -59,7 +62,7 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
       values={values}
       diagramFooter={
         <div className="space-y-3">
-          {!showComparison && <TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
+          {!showComparison && <TwoByTwoTable values={values} setValue={setValue} setValues={setValues} costState={costState} />}
           <label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer select-none">
             <input type="checkbox" checked={showComparison} onChange={(e) => setShowComparison(e.target.checked)}
               className="accent-amber-600" />
@@ -72,7 +75,7 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
       diagram={
         <TruthDiagram
           values={displayValues}
-          onDrag={showComparison ? undefined : setValues}
+          onDrag={showComparison || costState.costMode ? undefined : setValues}
           overlays={[activeView]}
           belowDiagramText={
             <span className="text-xs">
@@ -93,7 +96,7 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
-            <div className="text-xs font-semibold">PPV</div>
+            <div className="text-xs font-semibold">PPV{sub}</div>
             <div className="text-sm font-bold tabular-nums">{formatStat(displayStats.ppv)}</div>
           </button>
           <button
@@ -104,7 +107,7 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
-            <div className="text-xs font-semibold">NPV</div>
+            <div className="text-xs font-semibold">NPV{sub}</div>
             <div className="text-sm font-bold tabular-nums">{formatStat(displayStats.npv)}</div>
           </button>
         </div>
@@ -116,17 +119,16 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
 
         {/* PPV section — always visible */}
         <div className={activeView !== "ppv" ? "opacity-40 transition-opacity" : "transition-opacity"}>
-          <h3 className="text-sm font-bold text-green-700 uppercase tracking-wide mb-1">Positive Predictive Value</h3>
+          <h3 className="text-sm font-bold text-green-700 uppercase tracking-wide mb-1">PPV{sub}</h3>
           <p className="text-xs text-slate-600 leading-relaxed italic">
             &ldquo;My test was positive &mdash; do I really have the disease?&rdquo;
           </p>
           <p className="text-xs text-slate-600 leading-relaxed mt-1">
-            The proportion of positive results that are true positives.
-            On the diagram, PPV is the fraction of the upper + left edges (test-positive group) that is <span style={{ color: CELL_COLORS.tp }} className="font-semibold">green (TP)</span> vs <span style={{ color: CELL_COLORS.fp }} className="font-semibold">yellow (FP)</span>.
+            The proportion of positive results that are true positives. On the diagram, PPV is the fraction of the upper + left edges (test-positive group) that is <span style={{ color: CELL_COLORS.tp }} className="font-semibold">green (TP)</span> vs <span style={{ color: CELL_COLORS.fp }} className="font-semibold">yellow (FP)</span>.
           </p>
           <div className="mt-2 bg-green-50 rounded-lg p-3 space-y-1">
             <div className="text-sm font-mono text-green-800">
-              PPV = <span style={{ color: CELL_COLORS.tp }}>TP</span> / (<span style={{ color: CELL_COLORS.tp }}>TP</span> + <span style={{ color: CELL_COLORS.fp }}>FP</span>)
+              PPV{sub} = <span style={{ color: CELL_COLORS.tp }}>TP{sub}</span> / (<span style={{ color: CELL_COLORS.tp }}>TP{sub}</span> + <span style={{ color: CELL_COLORS.fp }}>FP{sub}</span>)
             </div>
             <div className="text-sm font-mono text-green-800">
               = <span style={{ color: CELL_COLORS.tp }}>{dTp}</span> / (<span style={{ color: CELL_COLORS.tp }}>{dTp}</span> + <span style={{ color: CELL_COLORS.fp }}>{dFp}</span>) = {dTp} / {dTp + dFp}
@@ -137,17 +139,16 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
 
         {/* NPV section — always visible */}
         <div className={activeView !== "npv" ? "opacity-40 transition-opacity" : "transition-opacity"}>
-          <h3 className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-1">Negative Predictive Value</h3>
+          <h3 className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-1">NPV{sub}</h3>
           <p className="text-xs text-slate-600 leading-relaxed italic">
             &ldquo;My test was negative &mdash; can I be sure I&rsquo;m healthy?&rdquo;
           </p>
           <p className="text-xs text-slate-600 leading-relaxed mt-1">
-            The proportion of negative results that are true negatives.
-            On the diagram, NPV is the fraction of the lower + right edges (test-negative group) that is <span style={{ color: CELL_COLORS.tn }} className="font-semibold">blue (TN)</span> vs <span style={{ color: CELL_COLORS.fn }} className="font-semibold">red (FN)</span>.
+            The proportion of negative results that are true negatives. On the diagram, NPV is the fraction of the lower + right edges (test-negative group) that is <span style={{ color: CELL_COLORS.tn }} className="font-semibold">blue (TN)</span> vs <span style={{ color: CELL_COLORS.fn }} className="font-semibold">red (FN)</span>.
           </p>
           <div className="mt-2 bg-blue-50 rounded-lg p-3 space-y-1">
             <div className="text-sm font-mono text-blue-800">
-              NPV = <span style={{ color: CELL_COLORS.tn }}>TN</span> / (<span style={{ color: CELL_COLORS.tn }}>TN</span> + <span style={{ color: CELL_COLORS.fn }}>FN</span>)
+              NPV{sub} = <span style={{ color: CELL_COLORS.tn }}>TN{sub}</span> / (<span style={{ color: CELL_COLORS.tn }}>TN{sub}</span> + <span style={{ color: CELL_COLORS.fn }}>FN{sub}</span>)
             </div>
             <div className="text-sm font-mono text-blue-800">
               = <span style={{ color: CELL_COLORS.tn }}>{dTn}</span> / (<span style={{ color: CELL_COLORS.tn }}>{dTn}</span> + <span style={{ color: CELL_COLORS.fn }}>{dFn}</span>) = {dTn} / {dTn + dFn}

@@ -55,7 +55,10 @@ export function Lesson6_LikelihoodRatios({
   onHome,
   onGoTo,
   lessonTitles,
+  costState,
 }: Lesson6Props) {
+  const sub = costState.costMode ? <sub className="text-[9px] text-orange-500">cost</sub> : null;
+
   const { tp, fp, fn, tn } = values;
   const diseased = tp + fn;
   const healthy = fp + tn;
@@ -81,8 +84,9 @@ export function Lesson6_LikelihoodRatios({
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
+      costState={costState}
       values={values}
-      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
+      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} costState={costState} />}
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
@@ -96,7 +100,7 @@ export function Lesson6_LikelihoodRatios({
       diagram={
         <TruthDiagram
           values={values}
-          onDrag={setValues}
+          onDrag={costState.costMode ? undefined : setValues}
           overlays={[]}
           renderExtraSvg={(layout) => (
             <DiagonalOverlays
@@ -125,7 +129,7 @@ export function Lesson6_LikelihoodRatios({
           <div className="bg-slate-50 rounded-lg p-2.5 mb-2">
             <div className="flex items-center gap-2 mb-1">
               <span className="w-5 h-0.5" style={{ backgroundImage: "repeating-linear-gradient(90deg, #92400e 0 6px, transparent 6px 10px)" }} />
-              <span className="text-[10px] font-bold text-slate-600 uppercase">Pretest odds (box diagonal)</span>
+              <span className="text-[10px] font-bold text-slate-600 uppercase">Pretest odds{sub} (box diagonal)</span>
             </div>
             <div className="text-sm font-mono text-slate-800">
               Diseased / Healthy = {diseased} / {healthy} = <strong>{formatRatio(pretestOdds)}</strong>
@@ -172,7 +176,7 @@ export function Lesson6_LikelihoodRatios({
           </p>
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-center">
-              <div className="text-[10px] text-slate-500 font-bold uppercase">Positive LR</div>
+              <div className="text-[10px] text-slate-500 font-bold uppercase">Positive LR{sub}</div>
               <div className="text-lg font-bold text-slate-800 mt-0.5">{formatRatio(posLR)}</div>
               <span className="inline-block mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: posQ.color }}>
                 {posQ.label}
@@ -180,7 +184,7 @@ export function Lesson6_LikelihoodRatios({
               <div className="text-[10px] text-slate-400 mt-1">&gt;10 strong &middot; 5–10 moderate</div>
             </div>
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-center">
-              <div className="text-[10px] text-slate-500 font-bold uppercase">Negative LR</div>
+              <div className="text-[10px] text-slate-500 font-bold uppercase">Negative LR{sub}</div>
               <div className="text-lg font-bold text-slate-800 mt-0.5">{formatRatio(negLR)}</div>
               <span className="inline-block mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: negQ.color }}>
                 {negQ.label}

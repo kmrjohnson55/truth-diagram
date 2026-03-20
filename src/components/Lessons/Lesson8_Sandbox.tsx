@@ -64,6 +64,7 @@ export function Lesson8_Sandbox({
   onHome,
   onGoTo,
   lessonTitles,
+  costState,
 }: Lesson8Props) {
   // Overlay toggle state
   const [activeOverlays, setActiveOverlays] = useState<OverlayType[]>([]);
@@ -94,6 +95,7 @@ export function Lesson8_Sandbox({
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
+      costState={costState}
       keyInsight={
         <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
           <p className="text-sm text-indigo-800">
@@ -103,11 +105,11 @@ export function Lesson8_Sandbox({
         </div>
       }
       values={values}
-      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
+      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} costState={costState} />}
       diagram={
         <TruthDiagram
           values={values}
-          onDrag={setValues}
+          onDrag={costState.costMode ? undefined : setValues}
           overlays={activeOverlays}
           renderExtraSvg={(showDiagonals || showChiSquare) ? (layout) => {
             const { centerX: cx, centerY: cy, scale: s } = layout;
@@ -179,46 +181,54 @@ export function Lesson8_Sandbox({
         <hr className="border-slate-100" />
 
         {/* All statistics */}
-        <div>
-          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
-            All Statistics
-          </h3>
-          <div className="space-y-1">
-            <StatRow label="Sensitivity" value={formatStat(stats.sensitivity)} color={CELL_COLORS.tp} />
-            <StatRow label="Specificity" value={formatStat(stats.specificity)} color={CELL_COLORS.tn} />
-            <StatRow label="PPV" value={formatStat(stats.ppv)} color={CELL_COLORS.tp} />
-            <StatRow label="NPV" value={formatStat(stats.npv)} color={CELL_COLORS.tn} />
-            <StatRow label="Accuracy" value={formatStat(stats.accuracy)} color="#64748b" />
-            <StatRow label="Prevalence" value={formatStat(stats.prevalence)} color="#94a3b8" />
-          </div>
-        </div>
+        {(() => {
+          const isCost = costState.costMode;
+          const suffix = isCost ? "ᶜᵒˢᵗ" : "";
+          return (
+            <>
+              <div>
+                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+                  All Statistics{isCost && <sub className="text-[9px] text-orange-500 ml-0.5">cost</sub>}
+                </h3>
+                <div className="space-y-1">
+                  <StatRow label={`Sensitivity${suffix}`} value={formatStat(stats.sensitivity)} color={CELL_COLORS.tp} />
+                  <StatRow label={`Specificity${suffix}`} value={formatStat(stats.specificity)} color={CELL_COLORS.tn} />
+                  <StatRow label={`PPV${suffix}`} value={formatStat(stats.ppv)} color={CELL_COLORS.tp} />
+                  <StatRow label={`NPV${suffix}`} value={formatStat(stats.npv)} color={CELL_COLORS.tn} />
+                  <StatRow label={`Accuracy${suffix}`} value={formatStat(stats.accuracy)} color="#64748b" />
+                  <StatRow label={`Prevalence${suffix}`} value={formatStat(stats.prevalence)} color="#94a3b8" />
+                </div>
+              </div>
 
-        <div>
-          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
-            Advanced
-          </h3>
-          <div className="space-y-1">
-            <StatRow label="Positive LR" value={formatRatio(stats.positiveLR)} color="#16a34a" />
-            <StatRow label="Negative LR" value={formatRatio(stats.negativeLR)} color="#dc2626" />
-            <StatRow label="Odds Ratio" value={formatRatio(stats.oddsRatio)} color="#64748b" />
-            <StatRow label="Pretest Odds" value={formatRatio(stats.pretestOdds)} color="#64748b" />
-            <StatRow
-              label="χ²"
-              value={formatRatio(chi2)}
-              color="#4f46e5"
-            />
-            <StatRow
-              label="p-value"
-              value={pValue < 0.001 ? "< 0.001" : pValue.toFixed(4)}
-              color={pValue < 0.05 ? "#16a34a" : "#ca8a04"}
-            />
-          </div>
-        </div>
+              <div>
+                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+                  Advanced{isCost && <sub className="text-[9px] text-orange-500 ml-0.5">cost</sub>}
+                </h3>
+                <div className="space-y-1">
+                  <StatRow label={`Positive LR${suffix}`} value={formatRatio(stats.positiveLR)} color="#16a34a" />
+                  <StatRow label={`Negative LR${suffix}`} value={formatRatio(stats.negativeLR)} color="#dc2626" />
+                  <StatRow label={`Odds Ratio${suffix}`} value={formatRatio(stats.oddsRatio)} color="#64748b" />
+                  <StatRow label={`Pretest Odds${suffix}`} value={formatRatio(stats.pretestOdds)} color="#64748b" />
+                  <StatRow
+                    label="χ²"
+                    value={formatRatio(chi2)}
+                    color="#4f46e5"
+                  />
+                  <StatRow
+                    label="p-value"
+                    value={pValue < 0.001 ? "< 0.001" : pValue.toFixed(4)}
+                    color={pValue < 0.05 ? "#16a34a" : "#ca8a04"}
+                  />
+                </div>
+              </div>
 
-        <div className="pt-1 flex items-center justify-between text-xs text-slate-600 bg-slate-50 rounded-md px-2 py-1.5">
-          <span>Total subjects</span>
-          <span className="font-bold text-slate-800 tabular-nums">{stats.total}</span>
-        </div>
+              <div className="pt-1 flex items-center justify-between text-xs text-slate-600 bg-slate-50 rounded-md px-2 py-1.5">
+                <span>Total {isCost ? "cost" : "subjects"}</span>
+                <span className="font-bold text-slate-800 tabular-nums">{stats.total}</span>
+              </div>
+            </>
+          );
+        })()}
       </div>
     </LessonLayout>
   );

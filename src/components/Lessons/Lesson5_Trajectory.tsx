@@ -130,6 +130,7 @@ export function Lesson5_Trajectory({
   onHome,
   onGoTo,
   lessonTitles,
+  costState,
 }: Lesson5Props) {
   const diseased = values.tp + values.fn;
   const healthy = values.fp + values.tn;
@@ -180,10 +181,12 @@ export function Lesson5_Trajectory({
     for (const p of trajectory) {
       const tpVal = Math.round(p.sensitivity * diseased);
       const fpVal = Math.round((1 - p.specificity) * healthy);
+      const fnVal = diseased - Math.round(p.sensitivity * diseased);
+      const tnVal = healthy - Math.round((1 - p.specificity) * healthy);
       maxTp = Math.max(maxTp, tpVal);
       maxFp = Math.max(maxFp, fpVal);
-      maxFn = Math.max(maxFn, diseased - tpVal);
-      maxTn = Math.max(maxTn, healthy - fpVal);
+      maxFn = Math.max(maxFn, fnVal);
+      maxTn = Math.max(maxTn, tnVal);
     }
     return computeLayout({ tp: maxTp, fp: maxFp, fn: maxFn, tn: maxTn }, 560, 500, 65);
   }, [trajectory, diseased, healthy]);
@@ -201,6 +204,7 @@ export function Lesson5_Trajectory({
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
+      costState={costState}
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
@@ -212,11 +216,11 @@ export function Lesson5_Trajectory({
         </div>
       }
       values={values}
-      diagramFooter={<TwoByTwoTable values={sliderValues} setValue={setValue} setValues={setValues} />}
+      diagramFooter={<TwoByTwoTable values={sliderValues} setValue={setValue} setValues={setValues} costState={costState} />}
       diagram={
         <TruthDiagram
           values={sliderValues}
-          onDrag={setValues}
+          onDrag={costState.costMode ? undefined : setValues}
           overlays={["sensitivity", "specificity"]}
           fixedLayout={fixedLayout}
           renderExtraSvg={(layout) => {
@@ -232,9 +236,7 @@ export function Lesson5_Trajectory({
             }
             const chanceStart = toSvg(0, 0, cx, cy, s);
             const ratio = healthy > 0 ? diseased / healthy : 1;
-            const maxHoriz = healthy;
-            const maxVert = diseased;
-            const ext = Math.min(maxHoriz, maxVert / ratio);
+            const ext = Math.min(healthy, diseased / ratio);
             const chanceEnd = toSvg(-ext, ext * ratio, cx, cy, s);
             const opPt = toSvg(-sliderValues.fp, sliderValues.tp, cx, cy, s);
             return (
@@ -311,24 +313,29 @@ export function Lesson5_Trajectory({
         </div>
 
         {/* Live stats — 2×2 grid */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-green-50 rounded-lg p-2 text-center">
-            <div className="text-[10px] text-green-600 font-semibold uppercase">Sensitivity</div>
-            <div className="text-base font-bold text-green-700 tabular-nums">{formatStat(sliderStats.sensitivity)}</div>
-          </div>
-          <div className="bg-blue-50 rounded-lg p-2 text-center">
-            <div className="text-[10px] text-blue-600 font-semibold uppercase">Specificity</div>
-            <div className="text-base font-bold text-blue-700 tabular-nums">{formatStat(sliderStats.specificity)}</div>
-          </div>
-          <div className="bg-green-50 rounded-lg p-2 text-center">
-            <div className="text-[10px] text-green-600 font-semibold uppercase">PPV</div>
-            <div className="text-base font-bold text-green-700 tabular-nums">{formatStat(sliderStats.ppv)}</div>
-          </div>
-          <div className="bg-blue-50 rounded-lg p-2 text-center">
-            <div className="text-[10px] text-blue-600 font-semibold uppercase">NPV</div>
-            <div className="text-base font-bold text-blue-700 tabular-nums">{formatStat(sliderStats.npv)}</div>
-          </div>
-        </div>
+        {(() => {
+          const sub = costState.costMode ? <sub className="text-[9px] text-orange-500">cost</sub> : null;
+          return (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-green-50 rounded-lg p-2 text-center">
+                <div className="text-[10px] text-green-600 font-semibold uppercase">Sensitivity{sub}</div>
+                <div className="text-base font-bold text-green-700 tabular-nums">{formatStat(sliderStats.sensitivity)}</div>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-2 text-center">
+                <div className="text-[10px] text-blue-600 font-semibold uppercase">Specificity{sub}</div>
+                <div className="text-base font-bold text-blue-700 tabular-nums">{formatStat(sliderStats.specificity)}</div>
+              </div>
+              <div className="bg-green-50 rounded-lg p-2 text-center">
+                <div className="text-[10px] text-green-600 font-semibold uppercase">PPV{sub}</div>
+                <div className="text-base font-bold text-green-700 tabular-nums">{formatStat(sliderStats.ppv)}</div>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-2 text-center">
+                <div className="text-[10px] text-blue-600 font-semibold uppercase">NPV{sub}</div>
+                <div className="text-base font-bold text-blue-700 tabular-nums">{formatStat(sliderStats.npv)}</div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ROC Curve + AUC + d' */}
         <div>

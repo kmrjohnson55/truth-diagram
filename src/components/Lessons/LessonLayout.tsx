@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { ExportButton } from "../UI/ExportPanel";
+import { CostPanel } from "../UI/CostPanel";
 import type { CellValues } from "../../utils/statistics";
+import type { CostState } from "./lessonTypes";
 
 export interface LessonMeta {
   number: number;
@@ -16,6 +18,7 @@ interface LessonLayoutProps {
   onHome: () => void;
   onGoTo: (lesson: number) => void;
   lessonTitles: string[];
+  costState: CostState;
   diagram: ReactNode;
   keyInsight?: ReactNode;
   diagramHeader?: ReactNode;
@@ -44,6 +47,7 @@ export function LessonLayout({
   onHome,
   onGoTo,
   lessonTitles: _lessonTitles,
+  costState,
   diagram,
   keyInsight,
   diagramHeader,
@@ -51,6 +55,8 @@ export function LessonLayout({
   children,
   values,
 }: LessonLayoutProps) {
+  const { costMode, costs, setCost, setCosts } = costState;
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -91,12 +97,19 @@ export function LessonLayout({
         </div>
       </div>
 
+      {/* Cost mode banner */}
+      {costMode && (
+        <div className="px-6 py-1.5 bg-orange-50 border-b border-orange-200 text-xs text-orange-800 text-center">
+          <strong>Cost mode active</strong> — diagram dimensions and values reflect costs (count &times; cost/subject)
+        </div>
+      )}
+
       {/* Main content */}
       <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6 overflow-auto">
         {/* Left: Diagram + footer */}
         <div className="flex-1 min-w-0 lg:w-3/5">
           {diagramHeader && <div className="mb-3">{diagramHeader}</div>}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+          <div className={`bg-white rounded-xl shadow-sm border p-4 ${costMode ? "border-orange-200" : "border-slate-200"}`}>
             {diagram}
           </div>
           {diagramFooter && (
@@ -105,9 +118,14 @@ export function LessonLayout({
             </div>
           )}
         </div>
-        {/* Right: Educational content */}
-        <div className="w-full lg:w-2/5 shrink-0">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4 h-full overflow-auto">
+        {/* Right: Educational content + cost panel */}
+        <div className="w-full lg:w-2/5 shrink-0 space-y-4">
+          {costMode && (
+            <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-4">
+              <CostPanel costs={costs} setCost={setCost} setCosts={setCosts} />
+            </div>
+          )}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4 overflow-auto">
             {keyInsight}
             {children}
           </div>

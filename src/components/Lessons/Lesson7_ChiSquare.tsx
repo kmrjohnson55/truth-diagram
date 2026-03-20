@@ -8,7 +8,7 @@ import {
   chiSquarePValue,
   formatRatio,
 } from "../../utils/statistics";
-import { toSvg } from "../../utils/geometry";
+import { toSvg, computeLayout } from "../../utils/geometry";
 import { CELL_COLORS } from "../../utils/colors";
 import type { CellValues, DiagnosticStats, ExpectedValues } from "../../utils/statistics";
 import type { LessonNavProps } from "./lessonTypes";
@@ -158,11 +158,24 @@ export function Lesson7_ChiSquare({
   onHome,
   onGoTo,
   lessonTitles,
+  costState,
 }: Lesson7Props) {
   const showContributions = true;
   const expected = useMemo(() => computeExpectedValues(values), [values]);
   const chi2 = useMemo(() => computeChiSquare(values, expected), [values, expected]);
   const pValue = useMemo(() => chiSquarePValue(chi2), [chi2]);
+
+  // Chi-square uses raw counts, not cost-weighted — ghost box must match observed box shape
+  // Fixed layout that fits both observed and expected boxes (in count space)
+  const chiLayout = useMemo(() => {
+    const maxVals = {
+      tp: Math.max(values.tp, expected.tp),
+      fp: Math.max(values.fp, expected.fp),
+      fn: Math.max(values.fn, expected.fn),
+      tn: Math.max(values.tn, expected.tn),
+    };
+    return computeLayout(maxVals, 560, 500, 70);
+  }, [values, expected]);
 
   // Per-cell contributions
   const cellColors: Record<string, string> = { tp: CELL_COLORS.tp, fp: CELL_COLORS.fp, fn: CELL_COLORS.fn, tn: CELL_COLORS.tn };
@@ -192,6 +205,7 @@ export function Lesson7_ChiSquare({
       onHome={onHome}
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
+      costState={costState}
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
           <p className="text-sm text-amber-800">
@@ -213,13 +227,13 @@ export function Lesson7_ChiSquare({
         </div>
       }
       values={values}
-      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} />}
+      diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} costState={costState} />}
       diagram={
         <TruthDiagram
           values={values}
-          onDrag={setValues}
+          onDrag={costState.costMode ? undefined : setValues}
           overlays={[]}
-          extraMargin={30}
+          fixedLayout={chiLayout}
           renderExtraSvg={(layout) => (
             <>
               <GhostExpectedBox
@@ -367,6 +381,7 @@ export function Lesson7_ChiSquare({
             </table>
           </div>
         </div>
+
 
       </div>
     </LessonLayout>
