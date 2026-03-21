@@ -178,7 +178,7 @@ function App() {
   // Introduction
   if (currentLesson === -1) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson0_Introduction key="intro" {...navProps} values={values} stats={stats} setValues={setValues} />
       </AppShell>
     );
@@ -186,7 +186,7 @@ function App() {
   // Lesson 1: Sensitivity & Specificity
   if (currentLesson === 1) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson3_SensSpec key="lesson1" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -194,7 +194,7 @@ function App() {
   // Lesson 2: Predictive Values
   if (currentLesson === 2) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson4_PredValues key="lesson2" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -202,7 +202,7 @@ function App() {
   // Lesson 3: Diagnostic Odds Ratio
   if (currentLesson === 3) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <LessonOddsRatio key="lesson3" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -210,7 +210,7 @@ function App() {
   // Lesson 4: Likelihood Ratios & Bayes
   if (currentLesson === 4) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson6_LikelihoodRatios key="lesson4" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -218,7 +218,7 @@ function App() {
   // Lesson 5: Chi-Square Test
   if (currentLesson === 5) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson7_ChiSquare key="lesson5" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -226,7 +226,7 @@ function App() {
   // Lesson 6: ROC Curves
   if (currentLesson === 6) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson5_Trajectory key="lesson6" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -234,7 +234,7 @@ function App() {
   // Lesson 7: Compare Two Tests
   if (currentLesson === 7) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson9_Compare key="lesson7" {...navProps} {...dataProps}
           valuesA={valuesA} valuesB={valuesB} statsA={statsA} statsB={statsB}
           setValuesA={setValuesA} setValuesB={setValuesB} setValueA={setValueA} setValueB={setValueB} />
@@ -244,7 +244,7 @@ function App() {
   // Lesson 8: Curve Data
   if (currentLesson === 8) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <LessonCurveInput key="lesson8" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -252,7 +252,7 @@ function App() {
   // Lesson 9: Summary
   if (currentLesson === 9) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
         <Lesson8_Sandbox key="lesson9" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -261,7 +261,7 @@ function App() {
   // Home view
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header costMode={costMode} setCostMode={setCostMode} hideCostToggle />
+      <Header costMode={costMode} setCostMode={setCostMode} />
       <main className="max-w-7xl mx-auto px-6 py-6">
         {/* Introduction button */}
         <div className="mb-4">

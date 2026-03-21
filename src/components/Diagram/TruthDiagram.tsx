@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import type { CellValues } from "../../utils/statistics";
 import { CELL_COLORS } from "../../utils/colors";
-import { computeLayout, toSvg, computeAutoMagnification } from "../../utils/geometry";
+import { computeLayout, toSvg, computeAutoMagnification, computeAutoMagnificationX } from "../../utils/geometry";
 import { Axes } from "./Axes";
 import { SubjectBox } from "./SubjectBox";
 import { StatOverlays } from "./StatOverlays";
@@ -45,15 +45,22 @@ type DragMode = "box" | "corner-ul" | "corner-ur" | "corner-ll" | "corner-lr" | 
 
 export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText, extraMargin = 0, fixedLayout, axisExtent, tickAxisExtent, yMag: yMagProp, hideTickAnnotation, axisOvershootOverride, costMode, subjectValues }: TruthDiagramProps) {
   // Auto-compute magnification when not explicitly set
-  const autoMag = computeAutoMagnification(values);
+  const autoMagY = computeAutoMagnification(values);
+  const autoMagX = computeAutoMagnificationX(values);
   const [magEnabled, setMagEnabled] = useState(true);
-  const yMag = yMagProp ?? (magEnabled ? autoMag : 1);
+  const yMag = yMagProp ?? (magEnabled ? autoMagY : 1);
+  const xMag = magEnabled ? autoMagX : 1;
 
-  // Create magnified values for rendering (vertical axis scaled up)
+  // Create magnified values for rendering (scale up whichever axis is too small)
   const displayValues = useMemo<CellValues>(() => {
-    if (yMag <= 1) return values;
-    return { tp: Math.round(values.tp * yMag), fp: values.fp, fn: Math.round(values.fn * yMag), tn: values.tn };
-  }, [values, yMag]);
+    if (yMag <= 1 && xMag <= 1) return values;
+    return {
+      tp: Math.round(values.tp * yMag),
+      fp: Math.round(values.fp * xMag),
+      fn: Math.round(values.fn * yMag),
+      tn: Math.round(values.tn * xMag),
+    };
+  }, [values, yMag, xMag]);
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const dragStart = useRef<{
@@ -286,7 +293,7 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
           centerX={centerX}
           centerY={centerY}
           scale={scale}
-          values={axisExtent ? (yMag > 1 ? { tp: Math.round(axisExtent.tp * yMag), fp: axisExtent.fp, fn: Math.round(axisExtent.fn * yMag), tn: axisExtent.tn } : axisExtent) : displayValues}
+          values={axisExtent ? { tp: Math.round(axisExtent.tp * yMag), fp: Math.round(axisExtent.fp * xMag), fn: Math.round(axisExtent.fn * yMag), tn: Math.round(axisExtent.tn * xMag) } : displayValues}
           tickValues={tickAxisExtent || axisExtent || values}
           hideTickAnnotation={hideTickAnnotation}
           axisOvershootOverride={axisOvershootOverride}
@@ -323,14 +330,15 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
 
       </svg>
 
-      {/* Magnification indicator — below diagram, prominent */}
       {/* Magnification indicator + toggle (only when auto-mag would apply) */}
-      {autoMag > 1 && yMagProp === undefined && (
+      {(autoMagY > 1 || autoMagX > 1) && yMagProp === undefined && (
         <div className="text-center mt-2 px-4 flex items-center justify-center gap-2">
           <label className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded-md cursor-pointer select-none">
             <input type="checkbox" checked={magEnabled} onChange={(e) => setMagEnabled(e.target.checked)}
               className="accent-amber-600" />
-            {magEnabled ? `Note: ↕ ${yMag}× vertical magnification` : "Magnify vertical axis"}
+            {magEnabled
+              ? `Note: ${autoMagY > 1 ? `↕ ${yMag}× vertical` : ""}${autoMagY > 1 && autoMagX > 1 ? " + " : ""}${autoMagX > 1 ? `↔ ${xMag}× horizontal` : ""} magnification`
+              : "Magnify axes"}
           </label>
         </div>
       )}
