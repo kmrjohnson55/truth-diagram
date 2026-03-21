@@ -101,9 +101,9 @@ export function StatsPanel({ stats, costMode, values, costs }: StatsPanelProps) 
                         {key.toUpperCase()}
                       </td>
                       <td className="p-1.5 text-center tabular-nums">{count}</td>
-                      <td className="p-1.5 text-center text-slate-400">&times;</td>
+                      <td className="p-1.5 text-center text-black">&times;</td>
                       <td className="p-1.5 text-center tabular-nums">{costPer}</td>
-                      <td className="p-1.5 text-center text-slate-400">=</td>
+                      <td className="p-1.5 text-center text-black">=</td>
                       <td className="p-1.5 text-right font-semibold tabular-nums">
                         {cellTotal.toLocaleString()}
                       </td>
@@ -126,7 +126,7 @@ export function StatsPanel({ stats, costMode, values, costs }: StatsPanelProps) 
         </>
       )}
 
-      <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
+      <h3 className="text-sm font-semibold text-black uppercase tracking-wide">
         {showCosts ? <>Statistics<sub className="text-[9px] text-orange-500 ml-0.5">cost</sub></> : "Statistics"}
       </h3>
 
@@ -140,7 +140,7 @@ export function StatsPanel({ stats, costMode, values, costs }: StatsPanelProps) 
               <span className="w-1.5 h-4 rounded-full" style={{ backgroundColor: row.color }} />
               <div>
                 <span className="text-sm font-medium text-slate-700">{row.label}</span>
-                <span className="text-xs text-slate-600 ml-1.5">{row.description}</span>
+                <span className="text-xs text-black ml-1.5">{row.description}</span>
               </div>
             </div>
             <span className="text-sm font-semibold text-slate-800 tabular-nums">{row.value}</span>
@@ -150,7 +150,7 @@ export function StatsPanel({ stats, costMode, values, costs }: StatsPanelProps) 
 
       <hr className="border-slate-100" />
 
-      <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
+      <h3 className="text-sm font-semibold text-black uppercase tracking-wide">
         {showCosts ? <>Advanced<sub className="text-[9px] text-orange-500 ml-0.5">cost</sub></> : "Advanced"}
       </h3>
 
@@ -164,7 +164,7 @@ export function StatsPanel({ stats, costMode, values, costs }: StatsPanelProps) 
               <span className="w-1.5 h-4 rounded-full" style={{ backgroundColor: row.color }} />
               <div>
                 <span className="text-sm font-medium text-slate-700">{row.label}</span>
-                <span className="text-xs text-slate-600 ml-1.5">{row.description}</span>
+                <span className="text-xs text-black ml-1.5">{row.description}</span>
               </div>
             </div>
             <span className="text-sm font-semibold text-slate-800 tabular-nums">{row.value}</span>
@@ -172,7 +172,7 @@ export function StatsPanel({ stats, costMode, values, costs }: StatsPanelProps) 
         ))}
       </div>
 
-      <div className="pt-2 text-xs text-slate-600">
+      <div className="pt-2 text-xs text-black">
         Total {showCosts ? "cost" : "subjects"}: {showCosts && costBreakdown ? costBreakdown.total.toLocaleString() : stats.total}
       </div>
     </div>

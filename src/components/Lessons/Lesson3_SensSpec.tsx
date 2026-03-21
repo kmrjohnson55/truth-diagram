@@ -34,9 +34,14 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
 
   const sub = costState.costMode ? <sub className="text-[9px] text-orange-500">cost</sub> : null;
 
+  // Determine which cells to dim based on active view
+  const dimCells: (keyof CellValues)[] = activeView === "sensitivity"
+    ? ["fp", "tn"]  // sensitivity uses TP and FN only
+    : ["tp", "fn"]; // specificity uses FP and TN only
+
   return (
     <LessonLayout
-      meta={{ number: 2, title: "Sensitivity & Specificity", subtitle: "How well does the test detect disease and health?" }}
+      meta={{ number: 1, title: "Sensitivity & Specificity", subtitle: "How well does the test detect disease and health?" }}
       totalLessons={totalLessons}
       onPrev={onPrev}
       onNext={onNext}
@@ -47,12 +52,12 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
       values={values}
       diagramFooter={
         <div className="space-y-3">
-          {!showLowPrev && <TwoByTwoTable values={values} setValue={setValue} setValues={setValues} costState={costState} />}
-          {/* Prevalence toggle — prominent, outside the key insight */}
+          {!showLowPrev && <TwoByTwoTable values={values} setValue={setValue} setValues={setValues} costState={costState} dimCells={dimCells} />}
+          {/* Prevalence toggle */}
           <label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer select-none">
             <input type="checkbox" checked={showLowPrev} onChange={(e) => setShowLowPrev(e.target.checked)}
               className="accent-amber-600" />
-            <span className="text-xs font-medium text-slate-700">
+            <span className="text-sm font-medium text-black">
               Show same test at <strong>5% prevalence</strong> (sens &amp; spec unchanged)
             </span>
           </label>
@@ -63,58 +68,50 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
           values={displayValues}
           onDrag={showLowPrev || costState.costMode ? undefined : setValues}
           overlays={[activeView]}
-          belowDiagramText={
-            <span className="text-xs">
-              &uarr; Drag up = higher sensitivity &nbsp;&middot;&nbsp;
-              &rarr; Drag right = higher specificity
-            </span>
-          }
         />
       }
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
-            <strong>Key insight:</strong> Sensitivity and specificity are properties of the <em>test itself</em>. They do <strong>not</strong> depend on prevalence &mdash; only the box shape changes, not these ratios.
+            <strong>Key insight:</strong> Sensitivity and specificity are properties of the test itself. They do not depend on disease prevalence. Sensitivity depends only on the vertical length and position of the box. Specificity depends only on the horizontal width and position of the box. For example, making the box wider has no effect at all on the sensitivity. You can drag and resize the box to illustrate this.
           </p>
         </div>
       }
     >
       <div className="space-y-4">
+        {/* Bold heading */}
+        <h2 className="text-xl font-bold text-black">Sensitivity and Specificity</h2>
+
         {/* Toggle buttons with live values */}
         <div className="flex gap-2">
           <button
             onClick={() => setActiveView("sensitivity")}
             className={`flex-1 px-3 py-2 rounded-lg transition-colors text-center ${
               activeView === "sensitivity"
-                ? "bg-green-500 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                ? "bg-green-200 text-green-900"
+                : "bg-slate-100 text-black hover:bg-slate-200"
             }`}
           >
-            <div className="text-xs font-semibold">Sensitivity{sub}</div>
-            <div className="text-sm font-bold tabular-nums">{formatStat(displayStats.sensitivity)}</div>
+            <div className="text-sm font-semibold">Sensitivity{sub}</div>
+            <div className="text-base font-bold tabular-nums">{formatStat(displayStats.sensitivity)}</div>
           </button>
           <button
             onClick={() => setActiveView("specificity")}
             className={`flex-1 px-3 py-2 rounded-lg transition-colors text-center ${
               activeView === "specificity"
-                ? "bg-blue-500 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                ? "bg-blue-200 text-blue-900"
+                : "bg-slate-100 text-black hover:bg-slate-200"
             }`}
           >
-            <div className="text-xs font-semibold">Specificity{sub}</div>
-            <div className="text-sm font-bold tabular-nums">{formatStat(displayStats.specificity)}</div>
+            <div className="text-sm font-semibold">Specificity{sub}</div>
+            <div className="text-base font-bold tabular-nums">{formatStat(displayStats.specificity)}</div>
           </button>
         </div>
-
-        {/* Tradeoff hint */}
-        <p className="text-xs text-slate-400 text-center -mt-2">
-          &uarr; Sensitivity &harr; &darr; Specificity &mdash; improving one tends to worsen the other
-        </p>
 
         {/* Sensitivity section — always visible */}
         <div className={activeView !== "sensitivity" ? "opacity-40 transition-opacity" : "transition-opacity"}>
           <h3 className="text-sm font-bold text-green-700 uppercase tracking-wide mb-1">Sensitivity{sub}</h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
+          <p className="text-base text-black leading-relaxed">
             The proportion of diseased patients who test positive. On the diagram, this is the fraction of the vertical axis (left side of the box) that lies above the origin.
           </p>
           <div className="mt-2 bg-green-50 rounded-lg p-3 space-y-1">
@@ -131,7 +128,7 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
         {/* Specificity section — always visible */}
         <div className={activeView !== "specificity" ? "opacity-40 transition-opacity" : "transition-opacity"}>
           <h3 className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-1">Specificity{sub}</h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
+          <p className="text-base text-black leading-relaxed">
             The proportion of healthy patients who test negative. On the diagram, this is the fraction of the horizontal axis (bottom of the box) that lies to the right of the origin.
           </p>
           <div className="mt-2 bg-blue-50 rounded-lg p-3 space-y-1">
@@ -146,7 +143,7 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
         </div>
 
         {showLowPrev && (
-          <div className="bg-slate-50 rounded-lg p-3 text-xs text-slate-600">
+          <div className="bg-slate-50 rounded-lg p-3 text-sm text-black">
             <strong>Notice:</strong> Sensitivity and specificity remain unchanged at 5% prevalence &mdash; only the box shape changes. The predictive values (next lesson) change dramatically.
           </div>
         )}

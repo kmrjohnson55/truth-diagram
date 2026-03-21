@@ -270,15 +270,21 @@ export function Lesson0_Introduction({
           <h3 className="text-sm font-bold text-black uppercase tracking-wide mb-2">
             References
           </h3>
-          <ol className="text-sm text-black space-y-1.5 list-decimal list-inside leading-relaxed">
+          <ol className="text-sm text-black space-y-2 list-decimal list-inside leading-relaxed">
             <li>
               Johnson KM. The two by two diagram: a graphical truth table. <em>J Clin Epidemiol.</em> 1999;52(11):1073-82.
+              {" "}[<a href="https://pubmed.ncbi.nlm.nih.gov/10527001/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">PubMed</a>]
+              {" "}[<a href="https://www.researchgate.net/publication/12773609" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">ResearchGate</a>]
             </li>
             <li>
-              Johnson KM, Johnson BK. Visual truth diagram. <em>AJR Am J Roentgenol.</em> 2014;203(1):W14-20.
+              Johnson KM, Johnson BK. Visual presentation of statistical concepts in diagnostic testing: the 2&times;2 diagram. <em>AJR Am J Roentgenol.</em> 2014;203(1):W14-20.
+              {" "}[<a href="https://pubmed.ncbi.nlm.nih.gov/24951225/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">PubMed</a>]
+              {" "}[<a href="https://www.researchgate.net/publication/263322395" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">ResearchGate</a>]
             </li>
             <li>
-              Johnson KM. The truth diagram for diagnostic tests. <em>Diagnosis (Berl).</em> 2017;4(3):159-67.
+              Johnson KM. Using Bayes&rsquo; rule in diagnostic testing: a graphical explanation. <em>Diagnosis (Berl).</em> 2017;4(3):159-67.
+              {" "}[<a href="https://pubmed.ncbi.nlm.nih.gov/29536931/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">PubMed</a>]
+              {" "}[<a href="https://www.researchgate.net/publication/319190834" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">ResearchGate</a>]
             </li>
           </ol>
         </div>

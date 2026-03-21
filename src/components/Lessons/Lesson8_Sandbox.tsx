@@ -42,7 +42,7 @@ function OverlayToggle({
       className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${
         active
           ? "text-white border-transparent"
-          : "text-slate-600 border-slate-200 bg-white hover:bg-slate-50"
+          : "text-black border-slate-200 bg-white hover:bg-slate-50"
       }`}
       style={active ? { backgroundColor: color, borderColor: color } : {}}
     >
@@ -86,7 +86,7 @@ export function Lesson8_Sandbox({
     <LessonLayout
       meta={{
         number: 8,
-        title: "Sandbox",
+        title: "Summary",
         subtitle: "Explore freely — all overlays, stats, and the 2×2 table",
       }}
       totalLessons={totalLessons}
@@ -141,7 +141,7 @@ export function Lesson8_Sandbox({
       <div className="space-y-4">
         {/* Overlay toggles */}
         <div>
-          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+          <h3 className="text-xs font-semibold text-black uppercase tracking-wide mb-2">
             Overlays
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -187,7 +187,7 @@ export function Lesson8_Sandbox({
           return (
             <>
               <div>
-                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+                <h3 className="text-xs font-semibold text-black uppercase tracking-wide mb-2">
                   All Statistics{isCost && <sub className="text-[9px] text-orange-500 ml-0.5">cost</sub>}
                 </h3>
                 <div className="space-y-1">
@@ -201,7 +201,7 @@ export function Lesson8_Sandbox({
               </div>
 
               <div>
-                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+                <h3 className="text-xs font-semibold text-black uppercase tracking-wide mb-2">
                   Advanced{isCost && <sub className="text-[9px] text-orange-500 ml-0.5">cost</sub>}
                 </h3>
                 <div className="space-y-1">
@@ -222,7 +222,7 @@ export function Lesson8_Sandbox({
                 </div>
               </div>
 
-              <div className="pt-1 flex items-center justify-between text-xs text-slate-600 bg-slate-50 rounded-md px-2 py-1.5">
+              <div className="pt-1 flex items-center justify-between text-xs text-black bg-slate-50 rounded-md px-2 py-1.5">
                 <span>Total {isCost ? "cost" : "subjects"}</span>
                 <span className="font-bold text-slate-800 tabular-nums">{stats.total}</span>
               </div>

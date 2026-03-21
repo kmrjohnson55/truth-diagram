@@ -4,9 +4,9 @@ import { InputPanel } from "./components/UI/InputPanel";
 import { StatsPanel } from "./components/UI/StatsPanel";
 import { CostPanel } from "./components/UI/CostPanel";
 import { Lesson0_Introduction } from "./components/Lessons/Lesson0_Introduction";
-import { Lesson2_BoxAxes } from "./components/Lessons/Lesson2_BoxAxes";
 import { Lesson3_SensSpec } from "./components/Lessons/Lesson3_SensSpec";
 import { Lesson4_PredValues } from "./components/Lessons/Lesson4_PredValues";
+import { LessonOddsRatio } from "./components/Lessons/LessonOddsRatio";
 import { Lesson5_Trajectory } from "./components/Lessons/Lesson5_Trajectory";
 import { Lesson6_LikelihoodRatios } from "./components/Lessons/Lesson6_LikelihoodRatios";
 import { Lesson7_ChiSquare } from "./components/Lessons/Lesson7_ChiSquare";
@@ -19,14 +19,14 @@ import type { CostWeights, CostState } from "./components/Lessons/lessonTypes";
 const TOTAL_LESSONS = 8;
 
 const LESSON_TITLES = [
-  "The Box and Axes",
   "Sensitivity & Specificity",
   "Predictive Values",
-  "ROC Curves",
+  "Diagnostic Odds Ratio",
   "Likelihood Ratios & Bayes",
   "Chi-Square Test",
+  "ROC Curves",
   "Compare Two Tests",
-  "Sandbox",
+  "Summary",
 ];
 
 function CostToggle({ costMode, setCostMode }: { costMode: boolean; setCostMode: (on: boolean) => void }) {
@@ -149,51 +149,51 @@ function App() {
       </AppShell>
     );
   }
-  // Lesson 1: Box & Axes
+  // Lesson 1: Sensitivity & Specificity
   if (currentLesson === 1) {
     return (
       <AppShell costMode={costMode} setCostMode={setCostMode}>
-        <Lesson2_BoxAxes key="lesson1" {...navProps} {...dataProps} />
+        <Lesson3_SensSpec key="lesson1" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
-  // Lesson 2: Sensitivity & Specificity
+  // Lesson 2: Predictive Values
   if (currentLesson === 2) {
     return (
       <AppShell costMode={costMode} setCostMode={setCostMode}>
-        <Lesson3_SensSpec key="lesson2" {...navProps} {...dataProps} />
+        <Lesson4_PredValues key="lesson2" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
-  // Lesson 3: Predictive Values
+  // Lesson 3: Diagnostic Odds Ratio
   if (currentLesson === 3) {
     return (
       <AppShell costMode={costMode} setCostMode={setCostMode}>
-        <Lesson4_PredValues key="lesson3" {...navProps} {...dataProps} />
+        <LessonOddsRatio key="lesson3" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
-  // Lesson 4: ROC Curves
+  // Lesson 4: Likelihood Ratios & Bayes
   if (currentLesson === 4) {
     return (
       <AppShell costMode={costMode} setCostMode={setCostMode}>
-        <Lesson5_Trajectory key="lesson4" {...navProps} {...dataProps} />
+        <Lesson6_LikelihoodRatios key="lesson4" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
-  // Lesson 5: Likelihood Ratios & Bayes
+  // Lesson 5: Chi-Square Test
   if (currentLesson === 5) {
     return (
       <AppShell costMode={costMode} setCostMode={setCostMode}>
-        <Lesson6_LikelihoodRatios key="lesson5" {...navProps} {...dataProps} />
+        <Lesson7_ChiSquare key="lesson5" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
-  // Lesson 6: Chi-Square Test
+  // Lesson 6: ROC Curves
   if (currentLesson === 6) {
     return (
       <AppShell costMode={costMode} setCostMode={setCostMode}>
-        <Lesson7_ChiSquare key="lesson6" {...navProps} {...dataProps} />
+        <Lesson5_Trajectory key="lesson6" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
@@ -205,7 +205,7 @@ function App() {
       </AppShell>
     );
   }
-  // Lesson 8: Sandbox
+  // Lesson 8: Summary
   if (currentLesson === 8) {
     return (
       <AppShell costMode={costMode} setCostMode={setCostMode}>
@@ -240,14 +240,14 @@ function App() {
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { n: 1, title: "Box & Axes", icon: "\u2795" },
-              { n: 2, title: "Sensitivity & Specificity", icon: "\uD83C\uDFAF" },
-              { n: 3, title: "Predictive Values", icon: "\uD83D\uDD2E" },
-              { n: 4, title: "ROC Curves", icon: "\uD83D\uDCC8" },
-              { n: 5, title: "Likelihood Ratios & Bayes", icon: "\u2696\uFE0F" },
-              { n: 6, title: "Chi-Square Test", icon: "\uD83D\uDCD0" },
+              { n: 1, title: "Sensitivity & Specificity", icon: "\uD83C\uDFAF" },
+              { n: 2, title: "Predictive Values", icon: "\uD83D\uDD2E" },
+              { n: 3, title: "Diagnostic Odds Ratio", icon: "\uD83D\uDCCA" },
+              { n: 4, title: "Likelihood Ratios & Bayes", icon: "\u2696\uFE0F" },
+              { n: 5, title: "Chi-Square Test", icon: "\uD83D\uDCD0" },
+              { n: 6, title: "ROC Curves", icon: "\uD83D\uDCC8" },
               { n: 7, title: "Compare Two Tests", icon: "\uD83D\uDD0D" },
-              { n: 8, title: "Sandbox", icon: "\uD83E\uDDEA" },
+              { n: 8, title: "Summary", icon: "\uD83E\uDDEA" },
             ].map((lesson) => (
               <button
                 key={lesson.n}

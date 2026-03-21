@@ -18,14 +18,14 @@ const fields: { key: keyof CellValues; label: string; color: string }[] = [
 export function InputPanel({ values, setValue, setValues }: InputPanelProps) {
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
+      <h3 className="text-sm font-semibold text-black uppercase tracking-wide">
         Cell Values
       </h3>
 
       <div className="grid grid-cols-2 gap-3">
         {fields.map(({ key, label, color }) => (
           <div key={key}>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-black mb-1">
               <span
                 className="inline-block w-2.5 h-2.5 rounded-full mr-1.5"
                 style={{ backgroundColor: color }}
@@ -45,12 +45,12 @@ export function InputPanel({ values, setValue, setValues }: InputPanelProps) {
         ))}
       </div>
 
-      <div className="text-sm font-medium text-slate-600 pt-2 border-t border-slate-100">
+      <div className="text-sm font-medium text-black pt-2 border-t border-slate-100">
         Total subjects: {values.tp + values.fp + values.fn + values.tn}
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1.5">
+        <label className="block text-xs font-medium text-black mb-1.5">
           Presets
         </label>
         <select
@@ -64,7 +64,7 @@ export function InputPanel({ values, setValue, setValues }: InputPanelProps) {
             bg-white text-slate-800"
         >
           <option value="">
-            Load a preset...
+            Load a preset example&hellip;
           </option>
           <optgroup label="General Examples">
             {generalPresets.map((p) => (
@@ -85,7 +85,7 @@ export function InputPanel({ values, setValue, setValues }: InputPanelProps) {
 
       <button
         onClick={() => setValues({ tp: 80, fp: 20, fn: 20, tn: 80 })}
-        className="w-full px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+        className="w-full px-3 py-1.5 text-xs font-medium text-black bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
       >
         Reset to default values
       </button>

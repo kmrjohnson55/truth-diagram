@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { DiagonalOverlays } from "../Diagram/DiagonalOverlays";
@@ -58,6 +59,7 @@ export function Lesson6_LikelihoodRatios({
   costState,
 }: Lesson6Props) {
   const sub = costState.costMode ? <sub className="text-[9px] text-orange-500">cost</sub> : null;
+  const [showBayesTooltip, setShowBayesTooltip] = useState(false);
 
   const { tp, fp, fn, tn } = values;
   const diseased = tp + fn;
@@ -74,7 +76,7 @@ export function Lesson6_LikelihoodRatios({
   return (
     <LessonLayout
       meta={{
-        number: 5,
+        number: 4,
         title: "Likelihood Ratios & Bayes",
         subtitle: "How slopes encode odds and connect pre- to post-test",
       }}
@@ -92,8 +94,8 @@ export function Lesson6_LikelihoodRatios({
           <p className="text-sm text-amber-800">
             <strong>Key insight:</strong> Each diagonal on the diagram represents
             the odds of disease in a specific context. A good test makes the
-            green diagonal steep (high odds after +) and the red diagonal flat
-            (low odds after &minus;).
+            green diagonal steep (high odds after + test) and the red diagonal flat
+            (low odds after &minus; test).
           </p>
         </div>
       }
@@ -119,9 +121,12 @@ export function Lesson6_LikelihoodRatios({
       }
     >
       <div className="space-y-4">
+        {/* Bold heading */}
+        <h2 className="text-xl font-bold text-black">Likelihood Ratios and Bayes&rsquo; Theorem</h2>
+
         {/* ── Three Odds ── */}
         <div>
-          <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">
+          <h3 className="text-xs font-bold text-black uppercase tracking-wide mb-2">
             Three Diagonals = Three Odds
           </h3>
 
@@ -129,12 +134,12 @@ export function Lesson6_LikelihoodRatios({
           <div className="bg-slate-50 rounded-lg p-2.5 mb-2">
             <div className="flex items-center gap-2 mb-1">
               <span className="w-5 h-0.5" style={{ backgroundImage: "repeating-linear-gradient(90deg, #92400e 0 6px, transparent 6px 10px)" }} />
-              <span className="text-[10px] font-bold text-slate-600 uppercase">Pretest odds{sub} (box diagonal)</span>
+              <span className="text-[10px] font-bold text-black uppercase">Pretest odds{sub} (box diagonal)</span>
             </div>
             <div className="text-sm font-mono text-slate-800">
               Diseased / Healthy = {diseased} / {healthy} = <strong>{formatRatio(pretestOdds)}</strong>
             </div>
-            <p className="text-[10px] text-slate-500 mt-0.5 italic">{oddsToWords(pretestOdds)}</p>
+            <p className="text-[10px] text-black mt-0.5 italic">{oddsToWords(pretestOdds)}</p>
           </div>
 
           {/* Post-test odds — grid layout */}
@@ -143,83 +148,115 @@ export function Lesson6_LikelihoodRatios({
             <div className="bg-slate-50 rounded-lg p-2.5">
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="w-4 h-0.5 rounded" style={{ backgroundColor: "#16a34a" }} />
-                <span className="text-[10px] font-bold text-slate-600 uppercase">After + test</span>
+                <span className="text-[10px] font-bold text-black uppercase">After + test</span>
               </div>
               <div className="text-xs font-mono text-slate-800">
                 <span style={{ color: CELL_COLORS.tp }}>TP</span>/<span style={{ color: CELL_COLORS.fp }}>FP</span> = {tp}/{fp} = <strong>{formatRatio(posttestOddsPos)}</strong>
               </div>
-              <p className="text-[10px] text-slate-500 mt-0.5">Steeper = better</p>
-              <p className="text-[10px] text-slate-600 italic mt-0.5">{oddsToWords(posttestOddsPos)}</p>
+              <p className="text-[10px] text-black mt-0.5">Steeper = better</p>
+              <p className="text-[10px] text-black italic mt-0.5">{oddsToWords(posttestOddsPos)}</p>
             </div>
             {/* Negative */}
             <div className="bg-slate-50 rounded-lg p-2.5">
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="w-4 h-0.5 rounded" style={{ backgroundColor: "#dc2626" }} />
-                <span className="text-[10px] font-bold text-slate-600 uppercase">After &minus; test</span>
+                <span className="text-[10px] font-bold text-black uppercase">After &minus; test</span>
               </div>
               <div className="text-xs font-mono text-slate-800">
                 <span style={{ color: CELL_COLORS.fn }}>FN</span>/<span style={{ color: CELL_COLORS.tn }}>TN</span> = {fn}/{tn} = <strong>{formatRatio(posttestOddsNeg)}</strong>
               </div>
-              <p className="text-[10px] text-slate-500 mt-0.5">Flatter = better</p>
-              <p className="text-[10px] text-slate-600 italic mt-0.5">{oddsToWords(posttestOddsNeg)}</p>
+              <p className="text-[10px] text-black mt-0.5">Flatter = better</p>
+              <p className="text-[10px] text-black italic mt-0.5">{oddsToWords(posttestOddsNeg)}</p>
             </div>
           </div>
         </div>
 
         {/* ── Likelihood Ratios ── */}
         <div>
-          <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">
+          <h3 className="text-xs font-bold text-black uppercase tracking-wide mb-2">
             Likelihood Ratios
           </h3>
-          <p className="text-xs text-slate-600 leading-relaxed mb-2">
+          <p className="text-base text-black leading-relaxed mb-2">
             The LR is the factor by which the test multiplies the pretest odds.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-center">
-              <div className="text-[10px] text-slate-500 font-bold uppercase">Positive LR{sub}</div>
+              <div className="text-[10px] text-black font-bold uppercase">Positive LR{sub}</div>
               <div className="text-lg font-bold text-slate-800 mt-0.5">{formatRatio(posLR)}</div>
               <span className="inline-block mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: posQ.color }}>
                 {posQ.label}
               </span>
-              <div className="text-[10px] text-slate-400 mt-1">&gt;10 strong &middot; 5–10 moderate</div>
+              <div className="text-[10px] text-black mt-1">&gt;10 strong &middot; 5–10 moderate</div>
             </div>
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-center">
-              <div className="text-[10px] text-slate-500 font-bold uppercase">Negative LR{sub}</div>
+              <div className="text-[10px] text-black font-bold uppercase">Negative LR{sub}</div>
               <div className="text-lg font-bold text-slate-800 mt-0.5">{formatRatio(negLR)}</div>
               <span className="inline-block mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: negQ.color }}>
                 {negQ.label}
               </span>
-              <div className="text-[10px] text-slate-400 mt-1">&lt;0.1 strong &middot; 0.1–0.2 moderate</div>
+              <div className="text-[10px] text-black mt-1">&lt;0.1 strong &middot; 0.1–0.2 moderate</div>
             </div>
           </div>
         </div>
 
         {/* ── Bayes' Theorem with live numbers ── */}
         <div>
-          <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">
-            Bayes&rsquo; Theorem (Odds Form)
-          </h3>
-          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-2">
-            <div className="bg-white/60 rounded px-3 py-2 text-sm font-mono text-indigo-900">
-              <div className="text-[10px] text-indigo-500 font-sans mb-0.5">After a positive test:</div>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-xs font-bold text-black uppercase tracking-wide">
+              Bayes&rsquo; Theorem (Odds Form)
+            </h3>
+            <div className="relative">
+              <button
+                onClick={() => setShowBayesTooltip(!showBayesTooltip)}
+                className="w-5 h-5 rounded-full bg-slate-200 text-black text-[10px] font-bold hover:bg-slate-300 transition-colors"
+                aria-label="More about Bayes' theorem"
+              >?</button>
+              {showBayesTooltip && (
+                <div className="absolute left-0 top-7 z-50 w-80 max-h-[70vh] overflow-auto bg-white border border-slate-300 rounded-lg shadow-lg p-4 text-sm text-black leading-relaxed">
+                  <button onClick={() => setShowBayesTooltip(false)} className="absolute top-2 right-2 text-black hover:text-slate-800 text-xs font-bold">&times;</button>
+                  <p className="mb-2">
+                    Published sensitivity and specificity values do not, by themselves, describe how well a test will work in the real world. Our question is: given the test result, what is the truth?
+                  </p>
+                  <p className="mb-2">
+                    Bayes&rsquo; theorem is the mathematical relationship that ties sensitivity and specificity to predictive values. In its odds form, it is remarkably simple: <strong>posttest odds = pretest odds &times; likelihood ratio</strong>.
+                  </p>
+                  <p className="mb-2">
+                    This means you start with your clinical suspicion (pretest probability), convert to odds, multiply by the appropriate likelihood ratio (+LR for a positive test, &minus;LR for a negative test), and arrive at the posttest odds, which can be converted back to a probability.
+                  </p>
+                  <p className="mb-2">
+                    The value of a high-sensitivity test is largely when the result is <em>negative</em> (to rule out). The value of a high-specificity test is largely when the result is <em>positive</em> (to rule in).
+                  </p>
+                  <p className="text-xs text-black mt-2 border-t border-slate-200 pt-2">
+                    Johnson KM. Using Bayes&rsquo; rule in diagnostic testing: a graphical explanation. <em>Diagnosis (Berl).</em> 2017;4(3):159-67.
+                    {" "}[<a href="https://pubmed.ncbi.nlm.nih.gov/29536931/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">PubMed</a>]
+                    {" "}[<a href="https://www.researchgate.net/publication/319190834" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">ResearchGate</a>]
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+          <p className="text-base text-black leading-relaxed mb-2">
+            Bayes&rsquo; theorem tells us how to update our belief about the probability of disease after seeing a test result. In its odds form, it is remarkably simple: multiply the pretest odds by the likelihood ratio to get the post-test odds. The truth diagram is essentially a graphical representation of this relationship &mdash; the three diagonal slopes encode the three odds, and the likelihood ratios are the factors that connect them.
+          </p>
+          <div className="rounded-lg border border-slate-200 p-3 space-y-2">
+            <div className="rounded px-3 py-2 text-sm font-mono text-black bg-slate-50">
+              <div className="text-[10px] text-black font-sans font-bold mb-0.5">After a positive test:</div>
+              Pretest odds &times; +LR = post-test odds<br />
               <span style={{ color: "#92400e" }}>{formatRatio(pretestOdds)}</span>
-              {" × "}
+              {" \u00D7 "}
               <span className="text-green-700">{formatRatio(posLR)}</span>
               {" = "}
               <strong className="text-green-700">{formatRatio(posttestOddsPos)}</strong>
             </div>
-            <div className="bg-white/60 rounded px-3 py-2 text-sm font-mono text-indigo-900">
-              <div className="text-[10px] text-indigo-500 font-sans mb-0.5">After a negative test:</div>
+            <div className="rounded px-3 py-2 text-sm font-mono text-black bg-slate-50">
+              <div className="text-[10px] text-black font-sans font-bold mb-0.5">After a negative test:</div>
+              Pretest odds &times; &minus;LR = post-test odds<br />
               <span style={{ color: "#92400e" }}>{formatRatio(pretestOdds)}</span>
-              {" × "}
+              {" \u00D7 "}
               <span className="text-red-700">{formatRatio(negLR)}</span>
               {" = "}
               <strong className="text-red-700">{formatRatio(posttestOddsNeg)}</strong>
             </div>
-            <p className="text-[10px] text-indigo-600 leading-relaxed">
-              Pretest odds &times; LR = post-test odds. The truth diagram is essentially
-              a graphical representation of Bayes&rsquo; theorem.
-            </p>
           </div>
         </div>
 

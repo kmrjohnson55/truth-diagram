@@ -187,15 +187,15 @@ export function Lesson7_ChiSquare({
   });
 
   // Chi-square interpretation
-  const chi2Interp = chi2 >= 10.83 ? "Very strong evidence of association"
-    : chi2 >= 6.63 ? "Strong evidence of association"
-    : chi2 >= 3.84 ? "Moderate evidence of association"
-    : "Weak or no evidence of association";
+  const chi2Interp = chi2 >= 10.83 ? "Very strong evidence results are not by chance"
+    : chi2 >= 6.63 ? "Strong evidence results are not by chance"
+    : chi2 >= 3.84 ? "Moderate evidence results are not by chance"
+    : "Weak or no evidence results differ from chance";
 
   return (
     <LessonLayout
       meta={{
-        number: 6,
+        number: 5,
         title: "Chi-Square Test",
         subtitle: "Measuring departure from chance",
       }}
@@ -207,22 +207,9 @@ export function Lesson7_ChiSquare({
       lessonTitles={lessonTitles}
       costState={costState}
       keyInsight={
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
-            <strong>What is &chi;&sup2;?</strong>{" "}
-            The chi-square statistic tests whether there is a statistically
-            significant association between two categorical variables &mdash;
-            here, between the test result (positive/negative) and the true
-            disease status (present/absent). A large &chi;&sup2; indicates
-            the test discriminates between disease and no-disease better
-            than chance alone.
-          </p>
-          <p className="text-sm text-amber-800">
-            <strong>On the diagram:</strong> The{" "}
-            <span className="text-slate-600 font-semibold">dashed gray box</span>{" "}
-            shows where the box would sit under the null hypothesis of
-            independence (no association), in other words, if the test had no effect on the likelihood of disease. The net displacement between the
-            solid and dashed boxes corresponds to the &chi;&sup2; value.
+            <strong>Key insight:</strong> The &chi;&sup2; statistic measures how far the observed data departs from what would be expected if the test had no discriminatory power. The dashed gray box on the diagram shows that null expectation; the greater the displacement between the two boxes, the larger the &chi;&sup2;.
           </p>
         </div>
       }
@@ -262,21 +249,40 @@ export function Lesson7_ChiSquare({
             ];
             return (
               <div className="space-y-3">
-                <div className="text-xs text-slate-600 text-center">
+                <div className="text-xs text-black text-center">
                   Solid colors are observed values, dotted colors are expected values.
                 </div>
                 {/* Visual colored-block equation first */}
                 <div className="text-center text-sm text-slate-800 leading-relaxed">
                   <span style={{ fontFamily: "Georgia, serif", fontSize: "1.1em" }}>&chi;</span>&sup2; ={" "}
-                  {cellData.map((c, i) => (
-                    <span key={c.key}>
-                      {i > 0 && " + "}
-                      <span className="inline-flex flex-col items-center mx-0.5">
-                        <span>(<span style={{color: c.color}}>&#9632;</span> &minus; <span style={{color: c.color, opacity: 0.5}}>&#9633;</span>)&sup2;</span>
-                        <span className="border-t border-slate-300 px-1"><span style={{color: c.color, opacity: 0.5}}>&#9633;</span></span>
+                  {cellData.map((c, i) => {
+                    // Striped square for expected values: tiny vertical stripes
+                    const stripedSquare = (
+                      <svg className="inline-block align-middle" width="14" height="14" viewBox="0 0 14 14">
+                        <defs>
+                          <pattern id={`stripes-${c.key}`} width="3" height="14" patternUnits="userSpaceOnUse">
+                            <rect width="1.5" height="14" fill={c.color} opacity="0.7" />
+                          </pattern>
+                        </defs>
+                        <rect x="0" y="0" width="14" height="14" rx="1.5" fill={`url(#stripes-${c.key})`} stroke="none" opacity="0.8" />
+                      </svg>
+                    );
+                    return (
+                      <span key={c.key}>
+                        {i > 0 && " + "}
+                        <span className="inline-flex flex-col items-center mx-0.5">
+                          <span>(
+                            <span className="inline-block w-3.5 h-3.5 rounded-sm align-middle" style={{backgroundColor: c.color}} />
+                            {" \u2212 "}
+                            {stripedSquare}
+                          )&sup2;</span>
+                          <span className="border-t border-slate-300 px-1">
+                            {stripedSquare}
+                          </span>
+                        </span>
                       </span>
-                    </span>
-                  ))}
+                    );
+                  })}
                 </div>
                 {/* Then numeric equation with actual values */}
                 <div className="text-center text-sm text-slate-800 leading-relaxed">
@@ -304,14 +310,17 @@ export function Lesson7_ChiSquare({
       }
     >
       <div className="space-y-5">
+        {/* Bold heading */}
+        <h2 className="text-xl font-bold text-black">Chi-Squared Statistic</h2>
+
         {/* What you see on the diagram */}
         <div>
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
+          <h3 className="text-sm font-bold text-black uppercase tracking-wide mb-2">
             Reading the Diagram
           </h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
+          <p className="text-sm text-black leading-relaxed">
             The <strong>solid box</strong> shows the observed data. The{" "}
-            <span className="text-slate-600 font-semibold">dashed gray box</span>{" "}
+            <span className="text-black font-semibold">dashed gray box</span>{" "}
             shows where the box would sit if the test had no discriminatory
             power &mdash; i.e., if disease status and test result were independent.
             The displacement between the two measures how informative the test is.
@@ -358,10 +367,10 @@ export function Lesson7_ChiSquare({
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-slate-100">
-                  <th className="p-2 text-left text-slate-600">Cell</th>
-                  <th className="p-2 text-center text-slate-600">Observed</th>
-                  <th className="p-2 text-center text-slate-600">Expected</th>
-                  <th className="p-2 text-center text-slate-600">(O&minus;E)&sup2;/E</th>
+                  <th className="p-2 text-left text-black">Cell</th>
+                  <th className="p-2 text-center text-black">Observed</th>
+                  <th className="p-2 text-center text-black">Expected</th>
+                  <th className="p-2 text-center text-black">(O&minus;E)&sup2;/E</th>
                 </tr>
               </thead>
               <tbody>
@@ -369,7 +378,7 @@ export function Lesson7_ChiSquare({
                   <tr key={c.key} className="border-t border-slate-100">
                     <td className="p-2 font-bold" style={{ color: c.color }}>{c.label}</td>
                     <td className="p-2 text-center font-mono">{c.o}</td>
-                    <td className="p-2 text-center font-mono text-slate-600">
+                    <td className="p-2 text-center font-mono text-black">
                       {c.e.toFixed(1)}
                     </td>
                     <td className="p-2 text-center font-mono font-semibold">

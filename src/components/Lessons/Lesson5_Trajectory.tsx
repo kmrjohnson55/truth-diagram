@@ -194,7 +194,7 @@ export function Lesson5_Trajectory({
   return (
     <LessonLayout
       meta={{
-        number: 4,
+        number: 6,
         title: "ROC Curves",
         subtitle: "How the threshold tradeoff shapes the diagram",
       }}
@@ -258,7 +258,7 @@ export function Lesson5_Trajectory({
           belowDiagramText={
             <div className="space-y-2">
               <div className="bg-slate-50 rounded-lg p-2 mx-auto max-w-md">
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-0.5">
+                <div className="flex items-center justify-between text-xs text-black mb-0.5">
                   <span>Threshold</span>
                   <span className="font-mono font-semibold text-slate-700">{threshold.toFixed(2)}</span>
                 </div>
@@ -271,7 +271,7 @@ export function Lesson5_Trajectory({
                   onChange={(e) => setThreshold(Number(e.target.value))}
                   className="w-full accent-indigo-500"
                 />
-                <div className="flex justify-between text-xs text-slate-500">
+                <div className="flex justify-between text-xs text-black">
                   <span>&larr; More sensitive</span>
                   <span>More specific &rarr;</span>
                 </div>
@@ -284,10 +284,10 @@ export function Lesson5_Trajectory({
       <div className="space-y-4">
         {/* Threshold explanation */}
         <div>
-          <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1">
+          <h3 className="text-xs font-bold text-black uppercase tracking-wide mb-1">
             The Threshold
           </h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
+          <p className="text-base text-black leading-relaxed">
             Many diagnostic tests produce a continuous measurement (e.g., blood glucose,
             PSA level, troponin). A <strong>threshold</strong> is chosen to classify results
             as &ldquo;positive&rdquo; or &ldquo;negative.&rdquo; Lowering the threshold
@@ -297,7 +297,7 @@ export function Lesson5_Trajectory({
         </div>
 
         {/* Diagram legend */}
-        <div className="text-xs text-slate-600 space-y-1">
+        <div className="text-xs text-black space-y-1">
           <div className="flex items-center gap-2">
             <span className="inline-block w-5 h-0.5 rounded" style={{ background: "#eab308" }} />
             <span><strong className="text-yellow-600">Yellow curve</strong> = test trajectory (all possible thresholds)</span>
@@ -339,7 +339,7 @@ export function Lesson5_Trajectory({
 
         {/* ROC Curve + AUC + d' */}
         <div>
-          <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">
+          <h3 className="text-xs font-bold text-black uppercase tracking-wide mb-2">
             ROC Curve
           </h3>
           <div className="flex gap-3">
@@ -350,7 +350,7 @@ export function Lesson5_Trajectory({
                 currentFpr={1 - sliderStats.specificity}
               />
             </div>
-            <div className="space-y-2 text-sm text-slate-600">
+            <div className="space-y-2 text-sm text-black">
               {/* AUC badge */}
               <div className="rounded-lg p-2" style={{ backgroundColor: aucQ.bg }}>
                 <div className="flex items-center gap-2">
@@ -359,7 +359,7 @@ export function Lesson5_Trajectory({
                     {aucQ.label}
                   </span>
                 </div>
-                <p className="text-[10px] leading-relaxed mt-0.5 text-slate-500">
+                <p className="text-[10px] leading-relaxed mt-0.5 text-black">
                   Overall performance across all thresholds. 0.5 = coin flip, 1.0 = perfect.
                 </p>
               </div>
@@ -371,7 +371,7 @@ export function Lesson5_Trajectory({
                     {dpQ.label}
                   </span>
                 </div>
-                <p className="text-[10px] leading-relaxed mt-0.5 text-slate-500">
+                <p className="text-[10px] leading-relaxed mt-0.5 text-black">
                   Separation between diseased and healthy distributions. 0 = no separation, &gt;3 = excellent.
                 </p>
               </div>

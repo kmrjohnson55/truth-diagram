@@ -47,7 +47,7 @@ export function CostPanel({ costs, setCost, setCosts }: CostPanelProps) {
       <div className="grid grid-cols-2 gap-3">
         {fields.map(({ key, abbr, color }) => (
           <div key={key}>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-black mb-1">
               <span
                 className="inline-block w-2.5 h-2.5 rounded-full mr-1.5"
                 style={{ backgroundColor: color }}
@@ -68,7 +68,7 @@ export function CostPanel({ costs, setCost, setCosts }: CostPanelProps) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1.5">
+        <label className="block text-xs font-medium text-black mb-1.5">
           Cost Presets
         </label>
         <select

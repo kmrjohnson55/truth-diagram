@@ -124,7 +124,7 @@ function CompactCostCell({ count, costPer, label, color }: { count: number; cost
     <div className="flex flex-col items-center gap-0.5">
       <span className="text-[9px] font-semibold" style={{ color }}>{label}<sub className="text-[7px]">cost</sub></span>
       <span className="text-xs font-bold tabular-nums" style={{ color }}>{total.toLocaleString()}</span>
-      <span className="text-[8px] text-slate-400 tabular-nums">{count}&times;{costPer}</span>
+      <span className="text-[8px] text-black tabular-nums">{count}&times;{costPer}</span>
     </div>
   );
 }
@@ -146,10 +146,10 @@ function EditableCompactTable({
     <div className="rounded-lg border p-2" style={{ borderColor: color + "40" }}>
       <div className="text-xs font-semibold mb-1" style={{ color }}>{label}</div>
       <table className="w-full text-xs border-collapse">
-        <thead><tr><th className="p-0.5"></th><th className="p-0.5 text-center text-slate-600">D+</th><th className="p-0.5 text-center text-slate-600">D−</th></tr></thead>
+        <thead><tr><th className="p-0.5"></th><th className="p-0.5 text-center text-black">D+</th><th className="p-0.5 text-center text-black">D−</th></tr></thead>
         <tbody>
           <tr>
-            <td className="p-0.5 text-slate-600 border-r border-slate-200">T+</td>
+            <td className="p-0.5 text-black border-r border-slate-200">T+</td>
             <td className="p-0.5 text-center">
               {isCost ? <CompactCostCell count={tp} costPer={costs.tp} label="TP" color="#16a34a" /> :
               <input type="number" min={0} value={tp} onChange={(e) => onChange("tp", parseInt(e.target.value) || 0)}
@@ -162,7 +162,7 @@ function EditableCompactTable({
             </td>
           </tr>
           <tr>
-            <td className="p-0.5 text-slate-600 border-r border-slate-200">T−</td>
+            <td className="p-0.5 text-black border-r border-slate-200">T−</td>
             <td className="p-0.5 text-center">
               {isCost ? <CompactCostCell count={fn} costPer={costs.fn} label="FN" color="#dc2626" /> :
               <input type="number" min={0} value={fn} onChange={(e) => onChange("fn", parseInt(e.target.value) || 0)}
@@ -176,7 +176,7 @@ function EditableCompactTable({
           </tr>
         </tbody>
       </table>
-      <div className="mt-1 text-xs text-slate-600 space-y-0.5">
+      <div className="mt-1 text-xs text-black space-y-0.5">
         <div>Sens{sub}: <strong>{formatStat(stats.sensitivity)}</strong> &nbsp; Spec{sub}: <strong>{formatStat(stats.specificity)}</strong></div>
         <div>N = {isCost ? (tp * costs.tp + fp * costs.fp + fn * costs.fn + tn * costs.tn).toLocaleString() : tp + fp + fn + tn} &nbsp; Prevalence{sub}: {formatStat(stats.prevalence)}</div>
       </div>
@@ -215,7 +215,7 @@ function TooltipDot({ text }: { text: string }) {
       <span
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
-        className="inline-flex items-center justify-center w-3.5 h-3.5 text-[9px] font-bold text-slate-400 bg-slate-100 rounded-full cursor-help select-none"
+        className="inline-flex items-center justify-center w-3.5 h-3.5 text-[9px] font-bold text-black bg-slate-100 rounded-full cursor-help select-none"
       >?</span>
       {show && (
         <span className="absolute left-5 top-1/2 -translate-y-1/2 z-50 w-52 px-2 py-1.5 text-xs text-white bg-slate-800 rounded-md shadow-lg leading-relaxed whitespace-normal">
@@ -239,8 +239,8 @@ function CompareRow({ label, valueA, valueB, betterHigher = true, tooltip }: {
         {label}
         {tooltip && <TooltipDot text={tooltip} />}
       </td>
-      <td className={`py-1.5 px-2 text-xs text-center font-semibold tabular-nums ${aWins ? "text-blue-700 bg-blue-50" : "text-slate-600"}`}>{valueA}</td>
-      <td className={`py-1.5 px-2 text-xs text-center font-semibold tabular-nums ${bWins ? "text-orange-700 bg-orange-50" : "text-slate-600"}`}>{valueB}</td>
+      <td className={`py-1.5 px-2 text-xs text-center font-semibold tabular-nums ${aWins ? "text-blue-700 bg-blue-50" : "text-black"}`}>{valueA}</td>
+      <td className={`py-1.5 px-2 text-xs text-center font-semibold tabular-nums ${bWins ? "text-orange-700 bg-orange-50" : "text-black"}`}>{valueB}</td>
     </tr>
   );
 }
@@ -400,11 +400,11 @@ export function Lesson9_Compare({
       lessonTitles={lessonTitles} costState={costState} values={effectiveA}
       diagramFooter={
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-black">
             <label className="flex items-center gap-1.5">
               <input type="checkbox" checked={sameProportions} onChange={(e) => setSameProportions(e.target.checked)}
                 className="accent-indigo-500" />
-              <span>Same population proportions <span className="text-slate-400">&mdash; editing one adjusts the other</span></span>
+              <span>Same population proportions <span className="text-black">&mdash; editing one adjusts the other</span></span>
             </label>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -483,7 +483,7 @@ export function Lesson9_Compare({
               </div>
               {autoMag > 1 && (
                 <div className="mt-1">
-                  <label className="inline-flex items-center gap-1.5 cursor-pointer select-none text-xs text-slate-500">
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer select-none text-xs text-black">
                     <input type="checkbox" checked={magEnabled} onChange={(e) => setMagEnabled(e.target.checked)}
                       className="accent-slate-500" />
                     {magEnabled ? `Note: ↕ ${yMag}× vertical magnification` : "Magnify vertical axis"}
@@ -498,7 +498,7 @@ export function Lesson9_Compare({
       <div className="space-y-4">
         {/* Test names */}
         <div>
-          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Test Names</h3>
+          <h3 className="text-xs font-semibold text-black uppercase tracking-wide mb-2">Test Names</h3>
           <div className="grid grid-cols-2 gap-2">
             <input type="text" value={labelA} onChange={(e) => setLabelA(e.target.value || "Test A")}
               className="px-2 py-1.5 text-sm border border-blue-200 rounded bg-blue-50 text-blue-700 font-bold" />
@@ -509,13 +509,13 @@ export function Lesson9_Compare({
 
         {/* Basic comparison table */}
         <div>
-          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+          <h3 className="text-xs font-semibold text-black uppercase tracking-wide mb-2">
             Basic Statistics
           </h3>
           <div className="bg-slate-50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead><tr className="bg-slate-100">
-                <th className="py-1.5 px-2 text-left text-xs text-slate-600"></th>
+                <th className="py-1.5 px-2 text-left text-xs text-black"></th>
                 <th className="py-1.5 px-2 text-center text-xs font-semibold text-blue-700">
                   <span className="inline-block w-2 h-2 rounded-full bg-blue-600 mr-1" />{labelA}
                 </th>
@@ -541,13 +541,13 @@ export function Lesson9_Compare({
 
         {/* Advanced comparison statistics */}
         <div>
-          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+          <h3 className="text-xs font-semibold text-black uppercase tracking-wide mb-2">
             Global Comparison
           </h3>
           <div className="bg-slate-50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead><tr className="bg-slate-100">
-                <th className="py-1.5 px-2 text-left text-xs text-slate-600"></th>
+                <th className="py-1.5 px-2 text-left text-xs text-black"></th>
                 <th className="py-1.5 px-2 text-center text-xs font-semibold text-blue-700">
                   <span className="inline-block w-2 h-2 rounded-full bg-blue-600 mr-1" />{labelA}
                 </th>
@@ -574,7 +574,7 @@ export function Lesson9_Compare({
                       </td>
                       <td className="py-1.5 px-2 text-xs text-center tabular-nums text-slate-700" colSpan={2}>
                         <span className="font-semibold">{nriStr}</span>
-                        <span className="block text-[10px] font-normal text-slate-500 mt-0.5">{nriInterp}</span>
+                        <span className="block text-[10px] font-normal text-black mt-0.5">{nriInterp}</span>
                       </td>
                     </tr>
                   );
