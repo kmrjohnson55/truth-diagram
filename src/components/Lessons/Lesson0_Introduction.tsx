@@ -1,43 +1,11 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { CELL_COLORS } from "../../utils/colors";
+import { computeLayout } from "../../utils/geometry";
+import { formatStat } from "../../utils/statistics";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
 import type { LessonNavProps } from "./lessonTypes";
-
-function IntroTooltip({ children }: { children: React.ReactNode }) {
-  const [show, setShow] = useState(false);
-  return (
-    <div className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
-      {children}
-      {show && (
-        <div className="absolute left-0 top-full mt-1 z-50 w-full p-3 text-xs text-slate-700 bg-white border border-slate-200 rounded-lg shadow-lg leading-relaxed">
-          <p className="mb-2">
-            The <strong>truth diagram</strong> (also called the 2&times;2 diagram)
-            was introduced by Johnson (1999) as a graphical alternative to the
-            standard contingency table used in diagnostic testing.
-          </p>
-          <p className="mb-2">
-            Instead of four numbers in a grid, a single rectangle on a coordinate
-            system encodes all four cells of the 2&times;2 table through its
-            position and shape. The origin of the axes divides the rectangle into
-            regions corresponding to TP, FP, FN, and TN.
-          </p>
-          <p className="mb-2">
-            This makes it possible to <em>see</em> statistics like sensitivity,
-            specificity, PPV, NPV, likelihood ratios, and even Bayes' theorem
-            as geometric relationships &mdash; lengths, areas, slopes, and
-            proportions &mdash; rather than abstract formulas.
-          </p>
-          <p>
-            Drag the box and its corners on the diagram to explore how changing
-            the test results affects every statistic simultaneously.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface IntroProps extends LessonNavProps {
   values: CellValues;
@@ -47,7 +15,7 @@ interface IntroProps extends LessonNavProps {
 
 export function Lesson0_Introduction({
   values,
-  stats: _stats,
+  stats,
   setValues,
   totalLessons,
   onPrev,
@@ -57,6 +25,31 @@ export function Lesson0_Introduction({
   lessonTitles,
   costState,
 }: IntroProps) {
+  // Fixed wider layout — disable auto-zoom, use generous padding
+  // Only re-compute if values grow beyond the fixed extent (anti-clipping)
+  const fixedExtent: CellValues = { tp: 140, fp: 140, fn: 140, tn: 140 };
+  const safeExtent = useMemo<CellValues>(() => ({
+    tp: Math.max(fixedExtent.tp, values.tp),
+    fp: Math.max(fixedExtent.fp, values.fp),
+    fn: Math.max(fixedExtent.fn, values.fn),
+    tn: Math.max(fixedExtent.tn, values.tn),
+  }), [values]);
+  const fixedLayout = useMemo(
+    () => computeLayout(safeExtent, 560, 500, 60),
+    [safeExtent]
+  );
+
+  // Computed values for Subject Box / Prevalence sections
+  const { tp, fp, fn, tn } = values;
+  const diseased = tp + fn;
+  const healthy = fp + tn;
+  const ratio = diseased > 0 && healthy > 0 ? diseased / healthy : 1;
+  let shapeIcon: string;
+  let shapeDesc: string;
+  if (ratio > 1.3) { shapeIcon = "\u25AE"; shapeDesc = "tall and narrow \u2014 high prevalence"; }
+  else if (ratio < 0.77) { shapeIcon = "\u25AC"; shapeDesc = "short and wide \u2014 low prevalence"; }
+  else { shapeIcon = "\u25A0"; shapeDesc = "roughly square \u2014 ~50% prevalence"; }
+
   return (
     <LessonLayout
       meta={{
@@ -71,12 +64,123 @@ export function Lesson0_Introduction({
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       costState={costState}
+      diagramFooter={
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Left: 2×2 table */}
+          <div className="lg:w-1/2">
+            <h3 className="text-sm font-bold text-black uppercase tracking-wide mb-2">
+              How It Maps to the 2&times;2 Table
+            </h3>
+            <div className="rounded-lg border border-slate-200 overflow-hidden text-sm">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50">
+                    <th className="p-2 text-black font-medium"></th>
+                    <th className="p-2 text-center font-semibold text-amber-700 border-l border-slate-200">With disease</th>
+                    <th className="p-2 text-center font-semibold text-amber-700 border-l border-slate-200">Without disease</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-slate-200">
+                    <td className="p-2 font-semibold text-black">Test +</td>
+                    <td className="p-2 text-center border-l border-slate-200">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-green-700 bg-green-50">
+                        &uarr; TP = {values.tp}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center border-l border-slate-200">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-yellow-700 bg-yellow-50">
+                        &larr; FP = {values.fp}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr className="border-t border-slate-200">
+                    <td className="p-2 font-semibold text-black">Test &minus;</td>
+                    <td className="p-2 text-center border-l border-slate-200">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-red-700 bg-red-50">
+                        &darr; FN = {values.fn}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center border-l border-slate-200">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-blue-700 bg-blue-50">
+                        &rarr; TN = {values.tn}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-sm text-black leading-relaxed">
+              Each cell maps to a direction on the diagram. The arrow shows
+              which way that cell extends from the origin.
+            </p>
+          </div>
+
+          {/* Right: Subject Box + Prevalence */}
+          <div className="lg:w-1/2 space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-black uppercase tracking-wide mb-2">The Subject Box</h3>
+              <p className="text-sm text-black leading-relaxed">
+                The origin is always inside the box, so every cell value is always &ge; 0.
+              </p>
+              <div className="mt-2 bg-slate-50 rounded-lg p-3 space-y-2 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-black">Vertical side:</span>
+                  <span className="font-semibold">
+                    <span style={{ color: CELL_COLORS.tp }}>TP</span>
+                    {" + "}
+                    <span style={{ color: CELL_COLORS.fn }}>FN</span>
+                    {" = "}
+                    <span style={{ color: CELL_COLORS.tp }}>{tp}</span>
+                    {" + "}
+                    <span style={{ color: CELL_COLORS.fn }}>{fn}</span>
+                    {" = "}
+                    <span className="text-black">{diseased}</span>
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-black">Horizontal side:</span>
+                  <span className="font-semibold">
+                    <span style={{ color: CELL_COLORS.fp }}>FP</span>
+                    {" + "}
+                    <span style={{ color: CELL_COLORS.tn }}>TN</span>
+                    {" = "}
+                    <span style={{ color: CELL_COLORS.fp }}>{fp}</span>
+                    {" + "}
+                    <span style={{ color: CELL_COLORS.tn }}>{tn}</span>
+                    {" = "}
+                    <span className="text-black">{healthy}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      }
       diagram={
         <TruthDiagram
           values={values}
           onDrag={costState.costMode ? undefined : setValues}
           overlays={[]}
           hideTickAnnotation
+          fixedLayout={fixedLayout}
+          axisOvershootOverride={60}
+          belowDiagramText={
+            <>
+              <div className="bg-indigo-50 rounded-lg p-3 text-sm mb-2 mx-auto max-w-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-indigo-600">Current prevalence:</span>
+                  <span className="font-bold text-indigo-700">{formatStat(stats.prevalence)}</span>
+                </div>
+                <p className="mt-1 text-xs text-indigo-600 font-medium">
+                  <span className="text-base leading-none mr-1">{shapeIcon}</span>
+                  {shapeDesc}
+                </p>
+              </div>
+              Drag box to move &middot; Drag corners to resize
+            </>
+          }
           renderExtraSvg={(layout) => {
             const { centerX: cx, centerY: cy, scale: s } = layout;
             const { tp, fp, fn, tn } = values;
@@ -87,9 +191,9 @@ export function Lesson0_Introduction({
             const ulX = cx - fp * s;
             const urX = cx + tn * s;
 
-            // Axis geometry (must match Axes.tsx)
+            // Axis geometry — use same overshoot as passed to TruthDiagram
             const arrowSize = 7;
-            const axisOvershoot = Math.max(20, s * 5);
+            const axisOvershoot = 60;
             const upLen = tp * s + axisOvershoot;
             const downLen = fn * s + axisOvershoot;
             const leftLen = fp * s + axisOvershoot;
@@ -113,16 +217,12 @@ export function Lesson0_Introduction({
             return (
               <g>
                 {/* ── Cell abbreviations beside each axis label ── */}
-                {/* TP beside "True positive" (above up arrow) */}
                 <text x={cx} y={cy - upLen - arrowSize - 6 + 15} textAnchor="middle"
                   fontSize={12} fontWeight={700} fill={CELL_COLORS.tp} style={{ userSelect: "none" }}>(TP)</text>
-                {/* FN beside "False negative" (below down arrow) */}
                 <text x={cx} y={cy + downLen + arrowSize + 16 + 14} textAnchor="middle"
                   fontSize={12} fontWeight={700} fill={CELL_COLORS.fn} style={{ userSelect: "none" }}>(FN)</text>
-                {/* FP beside "False positive" (left of left arrow) */}
                 <text x={cx - leftLen - arrowSize - 6} y={cy + 26} textAnchor="end"
                   fontSize={12} fontWeight={700} fill={CELL_COLORS.fp} style={{ userSelect: "none" }}>(FP)</text>
-                {/* TN beside "True negative" (right of right arrow) */}
                 <text x={cx + rightLen + arrowSize + 6} y={cy + 26} textAnchor="start"
                   fontSize={12} fontWeight={700} fill={CELL_COLORS.tn} style={{ userSelect: "none" }}>(TN)</text>
 
@@ -142,140 +242,45 @@ export function Lesson0_Introduction({
       }
     >
       <div className="space-y-5">
-        {/* ── Hero header ── */}
+        {/* ── Bold heading ── */}
         <div>
-          <h2 className="text-lg font-bold text-slate-800 mb-1">
-            The Truth Diagram
+          <h2 className="text-xl font-bold text-black mb-2">
+            The Two by Two Diagram
           </h2>
-          <IntroTooltip>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              A graphical way to visualize diagnostic test results. The
-              traditional 2&times;2 table becomes an interactive picture where
-              every statistic can be <em>seen at a glance</em>.{" "}
-              <span className="text-indigo-500 cursor-help underline decoration-dotted">
-                More&hellip;
-              </span>
-            </p>
-          </IntroTooltip>
-        </div>
-
-        {/* ── Visual 2×2 mini-table ── */}
-        <div>
-          <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">
-            How It Maps to the 2&times;2 Table
-          </h3>
-          <div className="rounded-lg border border-slate-200 overflow-hidden text-xs">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-slate-50">
-                  <th className="p-2 text-slate-500 font-medium"></th>
-                  <th className="p-2 text-center font-semibold text-amber-700 border-l border-slate-200">With disease</th>
-                  <th className="p-2 text-center font-semibold text-amber-700 border-l border-slate-200">Without disease</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-t border-slate-200">
-                  <td className="p-2 font-semibold text-slate-500">Test +</td>
-                  <td className="p-2 text-center border-l border-slate-200">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-green-700 bg-green-50">
-                      &uarr; TP
-                    </span>
-                  </td>
-                  <td className="p-2 text-center border-l border-slate-200">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-yellow-700 bg-yellow-50">
-                      &larr; FP
-                    </span>
-                  </td>
-                </tr>
-                <tr className="border-t border-slate-200">
-                  <td className="p-2 font-semibold text-slate-500">Test −</td>
-                  <td className="p-2 text-center border-l border-slate-200">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-red-700 bg-red-50">
-                      &darr; FN
-                    </span>
-                  </td>
-                  <td className="p-2 text-center border-l border-slate-200">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-blue-700 bg-blue-50">
-                      &rarr; TN
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p className="mt-2 text-xs text-slate-500 leading-relaxed">
-            Each cell maps to a direction on the diagram. The arrow shows
-            which way that cell extends from the origin.
+          <p className="text-base text-black leading-relaxed">
+            In diagnostic testing, many terms are used to describe how well the test detects the disease or disorder.
+            Examples are &ldquo;sensitivity&rdquo;, &ldquo;specificity&rdquo;, &ldquo;predictive values&rdquo;, &ldquo;odds ratio&rdquo;, &ldquo;likelihood ratios&rdquo; and numerous others. In the literature and medical presentations there is often not much consistency in their use; as a physician listening to or reading research, I was perpetually unclear on how these terms &ldquo;fit together&rdquo;.
+          </p>
+          <p className="text-base text-black leading-relaxed mt-3">
+            My solution was to invent the visual 2 by 2 diagram, or <strong>truth diagram</strong>, as a graphical alternative to the standard contingency table used in diagnostic testing (Johnson 1999). The concepts listed above, and many others, are represented graphically, and their inter-relationships can be clearly visualized.
+          </p>
+          <p className="text-base text-black leading-relaxed mt-3">
+            Instead of four numbers in a grid, a single rectangle on a coordinate system encodes all four cells of the 2&times;2 table through its position and shape. Each hemi-axis corresponds to one cell (see below). The vertical height corresponds to the number of subjects with the disorder, and the horizontal width corresponds to the number of subjects without the disorder. A low, wide box represents a low prevalence of the disorder; a high narrow box represents a high prevalence.
+          </p>
+          <p className="text-base text-black leading-relaxed mt-3">
+            The diagram makes it possible to see statistics like sensitivity, specificity, PPV, NPV, likelihood ratios, and even Bayes&rsquo; theorem as geometric relationships &mdash; lengths, areas, slopes, and proportions &mdash; rather than abstract formulas.
+          </p>
+          <p className="text-base text-black leading-relaxed mt-3">
+            Drag or resize the box to see how the cell values change. The other lessons in this app explain each of the terms and how they appear on the diagram. Any of these screens can be saved for presentation and publication purposes. &mdash; Kevin M. Johnson, M.D.
           </p>
         </div>
 
-        {/* ── Shape & position explanation ── */}
+        {/* ── References (Vancouver style, always visible) ── */}
         <div>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            The <strong>shape</strong> of the box reflects prevalence (how
-            common the disease is). The <strong>position</strong> reflects
-            test performance. A perfect test places the entire box in the
-            upper-right quadrant.
-          </p>
-        </div>
-
-        {/* ── Lesson cards ── */}
-        <div>
-          <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">
-            8 Lessons
-          </h3>
-          <div className="grid grid-cols-2 gap-1.5">
-            {[
-              { n: 1, title: "Box & Axes", desc: "Coordinate system" },
-              { n: 2, title: "Sens / Spec", desc: "Test accuracy" },
-              { n: 3, title: "PPV / NPV", desc: "Predictive values" },
-              { n: 4, title: "ROC Curves", desc: "Threshold tradeoffs" },
-              { n: 5, title: "LR & Bayes", desc: "Odds and slopes" },
-              { n: 6, title: "Chi-Square", desc: "Significance testing" },
-              { n: 7, title: "Compare", desc: "Two tests side-by-side" },
-              { n: 8, title: "Sandbox", desc: "Free exploration" },
-            ].map((l) => (
-              <button
-                key={l.n}
-                onClick={() => onGoTo(l.n)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-colors text-left"
-              >
-                <span className="text-xs font-bold text-indigo-500 w-4 shrink-0">{l.n}</span>
-                <div className="min-w-0">
-                  <span className="text-xs font-semibold text-slate-700 block truncate">{l.title}</span>
-                  <span className="text-[10px] text-slate-400 block truncate">{l.desc}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── References (compact) ── */}
-        <details className="text-xs text-slate-500">
-          <summary className="font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-slate-800">
+          <h3 className="text-sm font-bold text-black uppercase tracking-wide mb-2">
             References
-          </summary>
-          <ol className="mt-2 space-y-1.5 list-decimal list-inside leading-relaxed">
+          </h3>
+          <ol className="text-sm text-black space-y-1.5 list-decimal list-inside leading-relaxed">
             <li>
-              Johnson KM. <em>J Clin Epidemiol</em> 1999;52:1073&ndash;1082.
+              Johnson KM. The two by two diagram: a graphical truth table. <em>J Clin Epidemiol.</em> 1999;52(11):1073-82.
             </li>
             <li>
-              Johnson KM, Johnson BK. <em>AJR</em> 2014;203:W14&ndash;W20.
+              Johnson KM, Johnson BK. Visual truth diagram. <em>AJR Am J Roentgenol.</em> 2014;203(1):W14-20.
             </li>
             <li>
-              Johnson KM. <em>Diagnosis</em> 2017;4(3):159&ndash;167.
+              Johnson KM. The truth diagram for diagnostic tests. <em>Diagnosis (Berl).</em> 2017;4(3):159-67.
             </li>
           </ol>
-        </details>
-
-        {/* ── Start button ── */}
-        <div className="pt-1">
-          <button
-            onClick={() => onGoTo(1)}
-            className="w-full px-4 py-2 text-sm font-semibold text-white bg-indigo-400 hover:bg-indigo-500 rounded-lg transition-colors flex items-center justify-center gap-1.5"
-          >
-            Start Lesson 1: Box &amp; Axes &rarr;
-          </button>
         </div>
       </div>
     </LessonLayout>

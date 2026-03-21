@@ -28,6 +28,8 @@ interface TruthDiagramProps {
   yMag?: number;
   /** Hide the "1 tick = N" annotation near the origin */
   hideTickAnnotation?: boolean;
+  /** Override axis overshoot (how far axes extend beyond the box) */
+  axisOvershootOverride?: number;
   /** When true, diagram is showing cost-weighted values */
   costMode?: boolean;
   /** Original subject counts (passed when costMode is true, for label display) */
@@ -41,7 +43,7 @@ const CORNER_HIT_RADIUS = 12;
 
 type DragMode = "box" | "corner-ul" | "corner-ur" | "corner-ll" | "corner-lr" | null;
 
-export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText, extraMargin = 0, fixedLayout, axisExtent, tickAxisExtent, yMag: yMagProp, hideTickAnnotation, costMode, subjectValues }: TruthDiagramProps) {
+export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, belowDiagramText, extraMargin = 0, fixedLayout, axisExtent, tickAxisExtent, yMag: yMagProp, hideTickAnnotation, axisOvershootOverride, costMode, subjectValues }: TruthDiagramProps) {
   // Auto-compute magnification when not explicitly set
   const autoMag = computeAutoMagnification(values);
   const [magEnabled, setMagEnabled] = useState(true);
@@ -287,6 +289,7 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
           values={axisExtent ? (yMag > 1 ? { tp: Math.round(axisExtent.tp * yMag), fp: axisExtent.fp, fn: Math.round(axisExtent.fn * yMag), tn: axisExtent.tn } : axisExtent) : displayValues}
           tickValues={tickAxisExtent || axisExtent || values}
           hideTickAnnotation={hideTickAnnotation}
+          axisOvershootOverride={axisOvershootOverride}
         />
 
         {/* Corner handles */}

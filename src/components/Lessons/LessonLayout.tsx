@@ -85,7 +85,7 @@ export function LessonLayout({
               className={`px-2 py-1 text-xs font-medium rounded-md transition-colors shrink-0 ${
                 isCurrent
                   ? "bg-indigo-500 text-white"
-                  : "text-slate-600 hover:bg-slate-100"
+                  : "bg-blue-50 text-slate-600 hover:bg-blue-100"
               }`}
             >
               {num}. {title}

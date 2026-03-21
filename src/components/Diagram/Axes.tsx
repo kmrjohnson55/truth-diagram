@@ -17,6 +17,8 @@ interface AxesProps {
   tickValues?: CellValues;
   /** Hide the "1 tick = N" annotation text */
   hideTickAnnotation?: boolean;
+  /** Override axis overshoot (how far axes extend beyond the box) */
+  axisOvershootOverride?: number;
 }
 
 const TICK_HALF = 4; // px each side of the axis
@@ -28,7 +30,7 @@ function niceInterval(rawInterval: number): number {
   return NICE_NUMBERS.find(n => n >= rawInterval) || Math.ceil(rawInterval / 1000) * 1000;
 }
 
-export function Axes({ centerX, centerY, scale, values, tickValues, hideTickAnnotation }: AxesProps) {
+export function Axes({ centerX, centerY, scale, values, tickValues, hideTickAnnotation, axisOvershootOverride }: AxesProps) {
   // Use tickValues for tick computation (unmagnified), values for axis length
   const tv = tickValues || values;
 
@@ -40,7 +42,7 @@ export function Axes({ centerX, centerY, scale, values, tickValues, hideTickAnno
   const TICK_INTERVAL_V = niceInterval(MIN_TICK_PX / (scale * Math.max(magRatioV, 1)));
 
   const arrowSize = 7;
-  const axisOvershoot = Math.max(20, scale * 5);
+  const axisOvershoot = axisOvershootOverride ?? Math.max(20, scale * 5);
 
   const upLen = values.tp * scale + axisOvershoot;
   const downLen = values.fn * scale + axisOvershoot;

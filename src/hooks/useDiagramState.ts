@@ -12,7 +12,7 @@ export interface DiagramState {
   setValue: (key: keyof CellValues, val: number) => void;
 }
 
-const DEFAULT_VALUES: CellValues = { tp: 80, fp: 20, fn: 20, tn: 80 };
+const DEFAULT_VALUES: CellValues = { tp: 40, fp: 30, fn: 10, tn: 120 };
 
 export function useDiagramState(
   initial: CellValues = DEFAULT_VALUES
