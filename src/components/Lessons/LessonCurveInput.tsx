@@ -434,20 +434,89 @@ export function LessonCurveInput({
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
             <strong>How to obtain this data:</strong> Apply your diagnostic test to a population
-            with a known gold standard. For each candidate threshold, count the number of true
-            positives, false positives, false negatives, and true negatives. Enter those counts here.
-            The total number of diseased and healthy subjects should remain constant across rows
-            (only the classification changes as the threshold varies).
+            with a known gold standard. For each candidate threshold value, classify every subject
+            as positive or negative, then count the true positives, false positives, false negatives,
+            and true negatives. Enter those counts here. The total number of diseased subjects
+            (TP + FN) and healthy subjects (FP + TN) must remain constant across all rows &mdash;
+            only the classification changes as the threshold varies.
           </p>
         </div>
 
-        <div className="bg-slate-50 rounded-lg p-3">
-          <h3 className="text-sm font-bold text-black mb-1">CSV Format</h3>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-3">
+          <h3 className="text-sm font-bold text-black">CSV File Format</h3>
           <p className="text-sm text-black leading-relaxed">
-            Upload a CSV file with columns: <code className="text-xs bg-slate-200 px-1 rounded">threshold,TP,FP,FN,TN</code>.
-            The threshold column is optional. Tab-separated and semicolon-separated files are also supported.
-            A header row (if present) will be automatically skipped.
+            You can upload a CSV file instead of entering data manually. The file should
+            contain one row per threshold value, with columns for the 2&times;2 table counts.
           </p>
+
+          <div>
+            <h4 className="text-xs font-bold text-black uppercase tracking-wide mb-1">Required columns</h4>
+            <p className="text-sm text-black leading-relaxed">
+              <code className="text-xs bg-slate-200 px-1 rounded">TP</code>,{" "}
+              <code className="text-xs bg-slate-200 px-1 rounded">FP</code>,{" "}
+              <code className="text-xs bg-slate-200 px-1 rounded">FN</code>,{" "}
+              <code className="text-xs bg-slate-200 px-1 rounded">TN</code> &mdash;
+              integer counts for each cell of the 2&times;2 table at that threshold.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-bold text-black uppercase tracking-wide mb-1">Optional column</h4>
+            <p className="text-sm text-black leading-relaxed">
+              <code className="text-xs bg-slate-200 px-1 rounded">threshold</code> &mdash;
+              the cutoff value used (e.g., a lab measurement). If included, it must be the
+              first column. If omitted, only the four count columns are needed.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-bold text-black uppercase tracking-wide mb-1">Format rules</h4>
+            <ul className="text-sm text-black leading-relaxed list-disc list-inside space-y-1">
+              <li>Comma-separated (.csv), tab-separated (.tsv), or semicolon-separated</li>
+              <li>A header row is optional and will be automatically detected and skipped</li>
+              <li>Rows should be ordered from lowest to highest threshold (most sensitive to most specific)</li>
+              <li>TP + FN must be the same in every row (same number of diseased subjects)</li>
+              <li>FP + TN must be the same in every row (same number of healthy subjects)</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-bold text-black uppercase tracking-wide mb-1">Example (5 columns)</h4>
+            <pre className="text-xs bg-white border border-slate-200 rounded p-2 overflow-x-auto font-mono leading-relaxed">
+{`threshold,TP,FP,FN,TN
+-2.0,50,135,0,15
+-1.0,49,88,1,62
+ 0.0,42,25,8,125
+ 1.0,21,4,29,146
+ 2.0,5,0,45,150`}
+            </pre>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-bold text-black uppercase tracking-wide mb-1">Example (4 columns, no threshold)</h4>
+            <pre className="text-xs bg-white border border-slate-200 rounded p-2 overflow-x-auto font-mono leading-relaxed">
+{`TP,FP,FN,TN
+50,135,0,15
+49,88,1,62
+42,25,8,125
+21,4,29,146
+5,0,45,150`}
+            </pre>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-bold text-black uppercase tracking-wide mb-1">Download sample files</h4>
+            <div className="flex gap-2">
+              <a href={`${import.meta.env.BASE_URL}sample-curve-data.csv`} download
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors border border-indigo-200">
+                Sample CSV (single test)
+              </a>
+              <a href={`${import.meta.env.BASE_URL}sample-curve-data-two-tests.csv`} download
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors border border-indigo-200">
+                Sample CSV (two tests)
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </LessonLayout>

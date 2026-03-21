@@ -3,7 +3,7 @@ import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { formatStat, formatRatio, computeStats, computeExpectedValues, computeChiSquare } from "../../utils/statistics";
 import { computeLayout, toSvg, computeAutoMagnification } from "../../utils/geometry";
-import { computeDPrime, generateTrajectory, snapToTrajectory, computeAUC, computeTAI, computeCDISimple } from "../../utils/trajectory";
+import { computeDPrime, generateTrajectory, snapToTrajectory, computeAUC, computeAUT, computeCPISimple } from "../../utils/trajectory";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
 import type { LessonNavProps, CostState } from "./lessonTypes";
 
@@ -303,10 +303,10 @@ export function Lesson9_Compare({
   const trajectoryB = useMemo(() => showTrajectoryB ? generateTrajectory(dPrimeB, 200) : [], [showTrajectoryB, dPrimeB]);
   const aucA = useMemo(() => trajectoryA.length > 0 ? computeAUC(trajectoryA) : 0, [trajectoryA]);
   const aucB = useMemo(() => trajectoryB.length > 0 ? computeAUC(trajectoryB) : 0, [trajectoryB]);
-  const taiA = useMemo(() => trajectoryA.length > 0 ? computeTAI(trajectoryA, diseasedA, healthyA) : 0, [trajectoryA, diseasedA, healthyA]);
-  const taiB = useMemo(() => trajectoryB.length > 0 ? computeTAI(trajectoryB, diseasedB, healthyB) : 0, [trajectoryB, diseasedB, healthyB]);
-  const cdiA = useMemo(() => trajectoryA.length > 0 ? computeCDISimple(trajectoryA, diseasedA, healthyA) : 0, [trajectoryA, diseasedA, healthyA]);
-  const cdiB = useMemo(() => trajectoryB.length > 0 ? computeCDISimple(trajectoryB, diseasedB, healthyB) : 0, [trajectoryB, diseasedB, healthyB]);
+  const taiA = useMemo(() => trajectoryA.length > 0 ? computeAUT(trajectoryA, diseasedA, healthyA) : 0, [trajectoryA, diseasedA, healthyA]);
+  const taiB = useMemo(() => trajectoryB.length > 0 ? computeAUT(trajectoryB, diseasedB, healthyB) : 0, [trajectoryB, diseasedB, healthyB]);
+  const cdiA = useMemo(() => trajectoryA.length > 0 ? computeCPISimple(trajectoryA, diseasedA, healthyA) : 0, [trajectoryA, diseasedA, healthyA]);
+  const cdiB = useMemo(() => trajectoryB.length > 0 ? computeCPISimple(trajectoryB, diseasedB, healthyB) : 0, [trajectoryB, diseasedB, healthyB]);
 
   // When same proportions: editing Test A's cells updates Test B to match population
   const handleChangeA = useCallback((key: keyof CellValues, val: number) => {
@@ -457,13 +457,13 @@ export function Lesson9_Compare({
               {showTrajectoryA && (
                 <div className="text-xs text-black">
                   <span style={{ color: "#2563eb" }} className="font-semibold">{labelA}:</span>{" "}
-                  AUC {aucA.toFixed(3)} &middot; TAI {taiA.toFixed(3)} &middot; CDI {cdiA.toFixed(3)}
+                  AUC {aucA.toFixed(3)} &middot; AUT {taiA.toFixed(3)} &middot; CPI {cdiA.toFixed(3)}
                 </div>
               )}
               {showTrajectoryB && (
                 <div className="text-xs text-black">
                   <span style={{ color: "#ea580c" }} className="font-semibold">{labelB}:</span>{" "}
-                  AUC {aucB.toFixed(3)} &middot; TAI {taiB.toFixed(3)} &middot; CDI {cdiB.toFixed(3)}
+                  AUC {aucB.toFixed(3)} &middot; AUT {taiB.toFixed(3)} &middot; CPI {cdiB.toFixed(3)}
                 </div>
               )}
             </div>

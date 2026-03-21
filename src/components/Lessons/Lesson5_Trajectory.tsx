@@ -10,8 +10,8 @@ import {
   thresholdFromSensitivity,
   snapToTrajectory,
   computeAUC,
-  computeTAI,
-  computeCDISimple,
+  computeAUT,
+  computeCPISimple,
 } from "../../utils/trajectory";
 import { computeLayout, toSvg } from "../../utils/geometry";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
@@ -154,8 +154,8 @@ export function Lesson5_Trajectory({
   );
 
   const auc = useMemo(() => computeAUC(trajectory), [trajectory]);
-  const tai = useMemo(() => computeTAI(trajectory, diseased, healthy), [trajectory, diseased, healthy]);
-  const cdi = useMemo(() => computeCDISimple(trajectory, diseased, healthy), [trajectory, diseased, healthy]);
+  const tai = useMemo(() => computeAUT(trajectory, diseased, healthy), [trajectory, diseased, healthy]);
+  const cdi = useMemo(() => computeCPISimple(trajectory, diseased, healthy), [trajectory, diseased, healthy]);
   const aucQ = aucQuality(auc);
   const taiQ = aucQuality(tai); // same scale
   const cdiQ = aucQuality(cdi);
@@ -246,21 +246,21 @@ export function Lesson5_Trajectory({
               {/* Trajectory-based metrics */}
               <div className="rounded-lg p-2 border border-indigo-200 bg-indigo-50">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-indigo-700">TAI = {tai.toFixed(3)}</span>
+                  <span className="font-bold text-indigo-700">AUT = {tai.toFixed(3)}</span>
                   <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: taiQ.color }}>{taiQ.label}</span>
                 </div>
                 <p className="text-xs leading-relaxed mt-0.5 text-black">
-                  <strong>Trajectory Area Index.</strong> Like AUC but prevalence-sensitive.
+                  <strong>Area Under the Trajectory.</strong> Like AUC but prevalence-sensitive.
                 </p>
                 <p className="text-xs text-black mt-0.5 opacity-60">&lt;0.7 poor &middot; 0.7–0.8 fair &middot; 0.8–0.9 good &middot; &ge;0.9 excellent</p>
               </div>
               <div className="rounded-lg p-2 border border-purple-200 bg-purple-50">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-purple-700">CDI = {cdi.toFixed(3)}</span>
+                  <span className="font-bold text-purple-700">CPI = {cdi.toFixed(3)}</span>
                   <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: cdiQ.color }}>{cdiQ.label}</span>
                 </div>
                 <p className="text-xs leading-relaxed mt-0.5 text-black">
-                  <strong>Clinical Discrimination Index.</strong> Average PPV and NPV across all thresholds. Prevalence-sensitive.
+                  <strong>Clinical Prediction Index.</strong> Average PPV and NPV across all thresholds. Prevalence-sensitive.
                 </p>
                 <p className="text-xs text-black mt-0.5 opacity-60">&lt;0.7 poor &middot; 0.7–0.8 fair &middot; 0.8–0.9 good &middot; &ge;0.9 excellent</p>
               </div>

@@ -16,8 +16,8 @@ import {
   generateTrajectory,
   snapToTrajectory,
   computeAUC,
-  computeTAI,
-  computeCDISimple,
+  computeAUT,
+  computeCPISimple,
 } from "../../utils/trajectory";
 import { CELL_COLORS } from "../../utils/colors";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
@@ -161,8 +161,8 @@ export function Lesson8_Sandbox({
   const dPrime = useMemo(() => computeDPrime(stats.sensitivity, stats.specificity), [stats.sensitivity, stats.specificity]);
   const trajectory = useMemo(() => generateTrajectory(dPrime, 200), [dPrime]);
   const auc = useMemo(() => computeAUC(trajectory), [trajectory]);
-  const tai = useMemo(() => computeTAI(trajectory, diseased, healthy), [trajectory, diseased, healthy]);
-  const cdi = useMemo(() => computeCDISimple(trajectory, diseased, healthy), [trajectory, diseased, healthy]);
+  const tai = useMemo(() => computeAUT(trajectory, diseased, healthy), [trajectory, diseased, healthy]);
+  const cdi = useMemo(() => computeCPISimple(trajectory, diseased, healthy), [trajectory, diseased, healthy]);
 
   // Odds ratio
   const { tp, fp, fn, tn } = values;
@@ -336,8 +336,8 @@ export function Lesson8_Sandbox({
         {showTrajectory && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-1.5">
             <h4 className="text-xs font-bold text-black uppercase">Trajectory Metrics</h4>
-            <div className="flex justify-between text-sm"><span>TAI</span><span className="font-bold text-indigo-700">{tai.toFixed(3)}</span></div>
-            <div className="flex justify-between text-sm"><span>CDI</span><span className="font-bold text-purple-700">{cdi.toFixed(3)}</span></div>
+            <div className="flex justify-between text-sm"><span>AUT</span><span className="font-bold text-indigo-700">{tai.toFixed(3)}</span></div>
+            <div className="flex justify-between text-sm"><span>CPI</span><span className="font-bold text-purple-700">{cdi.toFixed(3)}</span></div>
             <p className="text-xs text-amber-700 italic mt-1">
               Modeled trajectory (fictional). For real data, go to the <strong>Curve Data</strong> page.
             </p>

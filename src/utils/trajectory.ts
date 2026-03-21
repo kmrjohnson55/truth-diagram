@@ -134,9 +134,9 @@ export function computeAUC(
 }
 
 /**
- * Compute the Trajectory Area Index (TAI).
+ * Compute the Area Under the Trajectory (AUT).
  *
- * TAI is the area between the test trajectory and the chance trajectory
+ * AUT is the area between the test trajectory and the chance trajectory
  * on the truth diagram, normalized to 0–1. At 50% prevalence it equals AUC.
  * At other prevalences it diverges — reflecting how the test performs in
  * this specific population (prevalence-sensitive).
@@ -145,7 +145,7 @@ export function computeAUC(
  * normalizing by the maximum possible area (the triangle formed by the
  * axes and population limits).
  */
-export function computeTAI(
+export function computeAUT(
   trajectory: { sensitivity: number; specificity: number }[],
   diseased: number,
   healthy: number
@@ -170,7 +170,7 @@ export function computeTAI(
   // Maximum possible area (perfect test): rectangle healthy × diseased
   const areaMax = healthy * diseased;
 
-  // Normalize: TAI = (trajectory area - chance area) / (max area - chance area)
+  // Normalize: AUT = (trajectory area - chance area) / (max area - chance area)
   // This gives 0 for chance, 1 for perfect, matching AUC's 0.5-to-1 range
   // But we remap to match AUC convention: 0.5 = chance, 1.0 = perfect
   if (areaMax <= areaChance) return 0.5;
@@ -179,17 +179,17 @@ export function computeTAI(
 }
 
 /**
- * Compute the Clinical Discrimination Index (CDI).
+ * Compute the Clinical Prediction Index (CPI).
  *
- * CDI is the average of PPV and NPV across all thresholds on the trajectory,
+ * CPI is the average of PPV and NPV across all thresholds on the trajectory,
  * weighted by the fraction of subjects at each operating point. Unlike AUC,
- * CDI is prevalence-sensitive and directly summarizes clinical usefulness —
+ * CPI is prevalence-sensitive and directly summarizes clinical usefulness —
  * how well the test answers the patient's question ("I tested positive/negative,
  * what are my chances?").
  *
  * Range: 0.5 (useless) to 1.0 (perfect).
  */
-export function computeCDI(
+export function computeCPI(
   trajectory: { sensitivity: number; specificity: number }[],
   diseased: number,
   healthy: number
@@ -225,9 +225,9 @@ export function computeCDI(
 }
 
 /**
- * Simplified CDI: unweighted average of (PPV + NPV) / 2 across all thresholds.
+ * Simplified CPI: unweighted average of (PPV + NPV) / 2 across all thresholds.
  */
-export function computeCDISimple(
+export function computeCPISimple(
   trajectory: { sensitivity: number; specificity: number }[],
   diseased: number,
   healthy: number
