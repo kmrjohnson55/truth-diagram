@@ -15,6 +15,12 @@ export interface CostState {
   subjectValues?: { tp: number; fp: number; fn: number; tn: number };
 }
 
+export interface TestToggleState {
+  activeTest: "A" | "B";
+  setActiveTest: (t: "A" | "B") => void;
+  hasTestB: boolean;
+}
+
 export interface LessonNavProps {
   totalLessons: number;
   onPrev: () => void;
@@ -23,4 +29,5 @@ export interface LessonNavProps {
   onGoTo: (lesson: number) => void;
   lessonTitles: string[];
   costState: CostState;
+  testToggle?: TestToggleState;
 }

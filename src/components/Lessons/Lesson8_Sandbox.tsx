@@ -14,6 +14,7 @@ import {
 import {
   computeDPrime,
   generateTrajectory,
+  snapToTrajectory,
   computeAUC,
   computeTAI,
   computeCDISimple,
@@ -90,6 +91,20 @@ function MiniRocCurve({
     ` L${tx(1 - last.specificity).toFixed(1)},${ty(0).toFixed(1)}` +
     ` L${tx(1 - first.specificity).toFixed(1)},${ty(0).toFixed(1)} Z`;
 
+  // Snap operating point to closest point on the trajectory curve
+  let bestDist = Infinity;
+  let snapFpr = currentFpr;
+  let snapSens = currentSens;
+  for (const p of trajectory) {
+    const pFpr = 1 - p.specificity;
+    const dist = (pFpr - currentFpr) ** 2 + (p.sensitivity - currentSens) ** 2;
+    if (dist < bestDist) {
+      bestDist = dist;
+      snapFpr = pFpr;
+      snapSens = p.sensitivity;
+    }
+  }
+
   return (
     <svg viewBox={`0 0 ${ROC_SIZE} ${ROC_SIZE}`} style={{ width: "100%", maxWidth: ROC_SIZE, background: "white", borderRadius: 8 }}>
       <rect width={ROC_SIZE} height={ROC_SIZE} fill="white" rx={8} />
@@ -99,7 +114,7 @@ function MiniRocCurve({
         stroke="#ef4444" strokeWidth={1} strokeDasharray="4 3" opacity={0.5} />
       <path d={fillD} fill="#4f46e5" opacity={0.08} />
       <path d={pathD} fill="none" stroke="#4f46e5" strokeWidth={2} />
-      <circle cx={tx(currentFpr)} cy={ty(currentSens)} r={4} fill="#4f46e5" stroke="white" strokeWidth={1.5} />
+      <circle cx={tx(snapFpr)} cy={ty(snapSens)} r={4} fill="#1e293b" stroke="white" strokeWidth={1.5} />
       <text x={ROC_SIZE / 2} y={ROC_SIZE - 4} textAnchor="middle" fontSize={8} fill="#94a3b8">1 − Specificity</text>
       <text x={8} y={ROC_SIZE / 2} textAnchor="middle" fontSize={8} fill="#94a3b8" transform={`rotate(-90, 8, ${ROC_SIZE / 2})`}>Sensitivity</text>
     </svg>
@@ -120,6 +135,7 @@ export function Lesson8_Sandbox({
   onGoTo,
   lessonTitles,
   costState,
+  testToggle,
 }: Lesson8Props) {
   const [activeOverlays, setActiveOverlays] = useState<OverlayType[]>([]);
   const [showDiagonals, setShowDiagonals] = useState(false);
@@ -188,6 +204,7 @@ export function Lesson8_Sandbox({
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       costState={costState}
+      testToggle={testToggle}
       keyInsight={
         <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
           <p className="text-sm text-indigo-800">
@@ -201,7 +218,13 @@ export function Lesson8_Sandbox({
       diagram={
         <TruthDiagram
           values={values}
-          onDrag={costState.costMode ? undefined : setValues}
+          onDrag={showTrajectory
+            ? (proposed) => {
+                const snapped = snapToTrajectory(proposed, dPrime, diseased, healthy);
+                setValues(snapped);
+              }
+            : setValues
+          }
           overlays={activeOverlays}
           fixedLayout={showTrajectory ? trajectoryLayout : undefined}
           renderExtraSvg={(showDiagonals || showChiSquare || showTrajectory || showOddsRatio) ? (layout) => {
@@ -273,6 +296,9 @@ export function Lesson8_Sandbox({
       }
     >
       <div className="space-y-4">
+        {/* Bold heading */}
+        <h2 className="text-xl font-bold text-black">Summary of Measures</h2>
+
         {/* Overlay toggles */}
         <div>
           <h3 className="text-xs font-semibold text-black uppercase tracking-wide mb-2">
@@ -321,7 +347,7 @@ export function Lesson8_Sandbox({
                 <MiniRocCurve trajectory={trajectory} currentSens={stats.sensitivity} currentFpr={1 - stats.specificity} />
               </div>
               <div className="space-y-1.5 text-sm">
-                <div className="flex justify-between"><span>AUC</span><span className="font-bold text-indigo-700">{auc.toFixed(3)}</span></div>
+                <div className="flex justify-between"><span>AUC </span><span className="font-bold text-indigo-700">{auc.toFixed(3)}</span></div>
                 <div className="flex justify-between"><span>d&prime;</span><span className="font-bold text-slate-700">{dPrime.toFixed(2)}</span></div>
               </div>
             </div>
@@ -356,13 +382,11 @@ export function Lesson8_Sandbox({
                   Advanced{isCost && <sub className="text-[9px] text-orange-500 ml-0.5">cost</sub>}
                 </h3>
                 <div className="space-y-1">
+                  <StatRow label={`Pretest Odds${suffix}`} value={formatRatio(stats.pretestOdds)} color="#64748b" />
                   <StatRow label={`Positive LR${suffix}`} value={formatRatio(stats.positiveLR)} color="#16a34a" />
                   <StatRow label={`Negative LR${suffix}`} value={formatRatio(stats.negativeLR)} color="#dc2626" />
-                  <StatRow label={`Odds Ratio${suffix}`} value={orValue === Infinity ? "\u221E" : orValue.toFixed(1)} color="#7c3aed" />
-                  <StatRow label={`Pretest Odds${suffix}`} value={formatRatio(stats.pretestOdds)} color="#64748b" />
-                  <StatRow label="\u03C7\u00B2" value={formatRatio(chi2)} color="#4f46e5" />
-                  <StatRow label="p-value" value={pValue < 0.001 ? "< 0.001" : pValue.toFixed(4)}
-                    color={pValue < 0.05 ? "#16a34a" : "#ca8a04"} />
+                  <StatRow label={`Diagnostic Odds Ratio${suffix}`} value={orValue === Infinity ? "\u221E" : orValue.toFixed(1)} color="#7c3aed" />
+                  <StatRow label={`\u03C7\u00B2${suffix}`} value={`${formatRatio(chi2)} (p ${pValue < 0.001 ? "< 0.001" : "= " + pValue.toFixed(4)})`} color="#4f46e5" />
                 </div>
               </div>
 

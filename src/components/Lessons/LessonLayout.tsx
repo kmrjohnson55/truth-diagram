@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { ExportButton } from "../UI/ExportPanel";
 import { CostPanel } from "../UI/CostPanel";
 import type { CellValues } from "../../utils/statistics";
-import type { CostState } from "./lessonTypes";
+import type { CostState, TestToggleState } from "./lessonTypes";
 
 export interface LessonMeta {
   number: number;
@@ -19,6 +19,7 @@ interface LessonLayoutProps {
   onGoTo: (lesson: number) => void;
   lessonTitles: string[];
   costState: CostState;
+  testToggle?: TestToggleState;
   diagram: ReactNode;
   keyInsight?: ReactNode;
   diagramHeader?: ReactNode;
@@ -49,6 +50,7 @@ export function LessonLayout({
   onGoTo,
   lessonTitles: _lessonTitles,
   costState,
+  testToggle,
   diagram,
   keyInsight,
   diagramHeader,
@@ -93,7 +95,27 @@ export function LessonLayout({
             </button>
           );
         })}
-        <div className="ml-auto shrink-0">
+        <div className="ml-auto shrink-0 flex items-center gap-2">
+          {testToggle && testToggle.hasTestB && meta.number !== 7 && (
+            <div className="flex items-center gap-1 bg-slate-50 rounded-full px-1 py-0.5 border border-slate-200">
+              <button
+                onClick={() => testToggle.setActiveTest("A")}
+                className={`px-2.5 py-0.5 text-xs font-semibold rounded-full transition-colors ${
+                  testToggle.activeTest === "A"
+                    ? "bg-blue-500 text-white"
+                    : "text-black hover:bg-slate-100"
+                }`}
+              >Test A</button>
+              <button
+                onClick={() => testToggle.setActiveTest("B")}
+                className={`px-2.5 py-0.5 text-xs font-semibold rounded-full transition-colors ${
+                  testToggle.activeTest === "B"
+                    ? "bg-orange-500 text-white"
+                    : "text-black hover:bg-slate-100"
+                }`}
+              >Test B</button>
+            </div>
+          )}
           {values && <ExportButton values={values} lesson={meta.number} />}
         </div>
       </div>

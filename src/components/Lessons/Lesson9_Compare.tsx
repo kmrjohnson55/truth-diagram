@@ -3,6 +3,7 @@ import { LessonLayout } from "./LessonLayout";
 import { TruthDiagram } from "../Diagram/TruthDiagram";
 import { formatStat, formatRatio, computeStats, computeExpectedValues, computeChiSquare } from "../../utils/statistics";
 import { computeLayout, toSvg, computeAutoMagnification } from "../../utils/geometry";
+import { computeDPrime, generateTrajectory, snapToTrajectory, computeAUC, computeTAI, computeCDISimple } from "../../utils/trajectory";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
 import type { LessonNavProps, CostState } from "./lessonTypes";
 
@@ -11,6 +12,14 @@ interface CompareProps extends LessonNavProps {
   stats: DiagnosticStats;
   setValue: (key: keyof CellValues, val: number) => void;
   setValues: (v: CellValues) => void;
+  valuesA: CellValues;
+  valuesB: CellValues;
+  statsA: DiagnosticStats;
+  statsB: DiagnosticStats;
+  setValuesA: (v: CellValues) => void;
+  setValuesB: (v: CellValues) => void;
+  setValueA: (key: keyof CellValues, val: number) => void;
+  setValueB: (key: keyof CellValues, val: number) => void;
 }
 
 interface ComparisonPreset {
@@ -254,26 +263,20 @@ function CompareRow({ label, valueA, valueB, betterHigher = true, tooltip }: {
 /* ─── Main component ─── */
 
 export function Lesson9_Compare({
-  values,
+  values: _values,
   stats: _stats,
   setValue: _setValue,
   setValues: _setValues,
-  totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState,
+  totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState, testToggle,
+  valuesA, valuesB, statsA: _propsStatsA, statsB: _propsStatsB,
+  setValuesA, setValuesB, setValueA: _setValueA, setValueB: _setValueB,
 }: CompareProps) {
-  // Test A initializes from the shared app values
-  const [valuesA, setValuesA] = useState<CellValues>(() => ({ ...values }));
-  // Test B: same proportions but different position (~60% sens, ~90% spec)
-  const [valuesB, setValuesB] = useState<CellValues>(() => {
-    const diseased = values.tp + values.fn;
-    const healthy = values.fp + values.tn;
-    const tpB = Math.round(0.6 * diseased);
-    const tnB = Math.round(0.9 * healthy);
-    return { tp: tpB, fp: healthy - tnB, fn: diseased - tpB, tn: tnB };
-  });
   const [sameProportions, setSameProportions] = useState(true);
   const [magEnabled, setMagEnabled] = useState(true);
   const [labelA, setLabelA] = useState("Test A");
   const [labelB, setLabelB] = useState("Test B");
+  const [showTrajectoryA, setShowTrajectoryA] = useState(false);
+  const [showTrajectoryB, setShowTrajectoryB] = useState(false);
 
   // Apply cost weighting when cost mode is on
   const { costMode, costs } = costState;
@@ -289,55 +292,66 @@ export function Lesson9_Compare({
   const statsA = useMemo(() => computeStats(effectiveA), [effectiveA]);
   const statsB = useMemo(() => computeStats(effectiveB), [effectiveB]);
 
+  // Trajectories for each test
+  const diseasedA = valuesA.tp + valuesA.fn;
+  const healthyA = valuesA.fp + valuesA.tn;
+  const diseasedB = valuesB.tp + valuesB.fn;
+  const healthyB = valuesB.fp + valuesB.tn;
+  const dPrimeA = useMemo(() => computeDPrime(statsA.sensitivity, statsA.specificity), [statsA.sensitivity, statsA.specificity]);
+  const dPrimeB = useMemo(() => computeDPrime(statsB.sensitivity, statsB.specificity), [statsB.sensitivity, statsB.specificity]);
+  const trajectoryA = useMemo(() => showTrajectoryA ? generateTrajectory(dPrimeA, 200) : [], [showTrajectoryA, dPrimeA]);
+  const trajectoryB = useMemo(() => showTrajectoryB ? generateTrajectory(dPrimeB, 200) : [], [showTrajectoryB, dPrimeB]);
+  const aucA = useMemo(() => trajectoryA.length > 0 ? computeAUC(trajectoryA) : 0, [trajectoryA]);
+  const aucB = useMemo(() => trajectoryB.length > 0 ? computeAUC(trajectoryB) : 0, [trajectoryB]);
+  const taiA = useMemo(() => trajectoryA.length > 0 ? computeTAI(trajectoryA, diseasedA, healthyA) : 0, [trajectoryA, diseasedA, healthyA]);
+  const taiB = useMemo(() => trajectoryB.length > 0 ? computeTAI(trajectoryB, diseasedB, healthyB) : 0, [trajectoryB, diseasedB, healthyB]);
+  const cdiA = useMemo(() => trajectoryA.length > 0 ? computeCDISimple(trajectoryA, diseasedA, healthyA) : 0, [trajectoryA, diseasedA, healthyA]);
+  const cdiB = useMemo(() => trajectoryB.length > 0 ? computeCDISimple(trajectoryB, diseasedB, healthyB) : 0, [trajectoryB, diseasedB, healthyB]);
+
   // When same proportions: editing Test A's cells updates Test B to match population
   const handleChangeA = useCallback((key: keyof CellValues, val: number) => {
-    setValuesA((prev) => {
-      const next = { ...prev, [key]: val };
-      if (sameProportions) {
-        // Recalculate Test B for the new population
-        const newDiseased = next.tp + next.fn;
-        const newHealthy = next.fp + next.tn;
-        const oldDiseased = valuesB.tp + valuesB.fn;
-        const oldHealthy = valuesB.fp + valuesB.tn;
-        if (newDiseased !== oldDiseased || newHealthy !== oldHealthy) {
-          const sensB = oldDiseased > 0 ? valuesB.tp / oldDiseased : 0;
-          const specB = oldHealthy > 0 ? valuesB.tn / oldHealthy : 0;
-          const newTpB = Math.round(sensB * newDiseased);
-          const newTnB = Math.round(specB * newHealthy);
-          setValuesB({ tp: newTpB, fp: newHealthy - newTnB, fn: newDiseased - newTpB, tn: newTnB });
-        }
+    const next = { ...valuesA, [key]: val };
+    setValuesA(next);
+    if (sameProportions) {
+      const newDiseased = next.tp + next.fn;
+      const newHealthy = next.fp + next.tn;
+      const oldDiseased = valuesB.tp + valuesB.fn;
+      const oldHealthy = valuesB.fp + valuesB.tn;
+      if (newDiseased !== oldDiseased || newHealthy !== oldHealthy) {
+        const sensB = oldDiseased > 0 ? valuesB.tp / oldDiseased : 0;
+        const specB = oldHealthy > 0 ? valuesB.tn / oldHealthy : 0;
+        const newTpB = Math.round(sensB * newDiseased);
+        const newTnB = Math.round(specB * newHealthy);
+        setValuesB({ tp: newTpB, fp: newHealthy - newTnB, fn: newDiseased - newTpB, tn: newTnB });
       }
-      return next;
-    });
-  }, [sameProportions, valuesB]);
+    }
+  }, [sameProportions, valuesA, valuesB, setValuesA, setValuesB]);
 
   const handleChangeB = useCallback((key: keyof CellValues, val: number) => {
-    setValuesB((prev) => {
-      const next = { ...prev, [key]: val };
-      if (sameProportions) {
-        // Recalculate Test A for the new population
-        const newDiseased = next.tp + next.fn;
-        const newHealthy = next.fp + next.tn;
-        const oldDiseased = valuesA.tp + valuesA.fn;
-        const oldHealthy = valuesA.fp + valuesA.tn;
-        if (newDiseased !== oldDiseased || newHealthy !== oldHealthy) {
-          const sensA = oldDiseased > 0 ? valuesA.tp / oldDiseased : 0;
-          const specA = oldHealthy > 0 ? valuesA.tn / oldHealthy : 0;
-          const newTpA = Math.round(sensA * newDiseased);
-          const newTnA = Math.round(specA * newHealthy);
-          setValuesA({ tp: newTpA, fp: newHealthy - newTnA, fn: newDiseased - newTpA, tn: newTnA });
-        }
+    const next = { ...valuesB, [key]: val };
+    setValuesB(next);
+    if (sameProportions) {
+      const newDiseased = next.tp + next.fn;
+      const newHealthy = next.fp + next.tn;
+      const oldDiseased = valuesA.tp + valuesA.fn;
+      const oldHealthy = valuesA.fp + valuesA.tn;
+      if (newDiseased !== oldDiseased || newHealthy !== oldHealthy) {
+        const sensA = oldDiseased > 0 ? valuesA.tp / oldDiseased : 0;
+        const specA = oldHealthy > 0 ? valuesA.tn / oldHealthy : 0;
+        const newTpA = Math.round(sensA * newDiseased);
+        const newTnA = Math.round(specA * newHealthy);
+        setValuesA({ tp: newTpA, fp: newHealthy - newTnA, fn: newDiseased - newTpA, tn: newTnA });
       }
-      return next;
-    });
-  }, [sameProportions, valuesA]);
+    }
+  }, [sameProportions, valuesA, valuesB, setValuesA, setValuesB]);
 
   // Drag handlers
   const handleDragA = useCallback((newValues: CellValues) => {
-    setValuesA(newValues);
+    const snapped = showTrajectoryA ? snapToTrajectory(newValues, dPrimeA, diseasedA, healthyA) : newValues;
+    setValuesA(snapped);
     if (sameProportions) {
-      const d = newValues.tp + newValues.fn;
-      const h = newValues.fp + newValues.tn;
+      const d = snapped.tp + snapped.fn;
+      const h = snapped.fp + snapped.tn;
       const oldD = valuesB.tp + valuesB.fn;
       const oldH = valuesB.fp + valuesB.tn;
       if (d !== oldD || h !== oldH) {
@@ -346,7 +360,7 @@ export function Lesson9_Compare({
         setValuesB({ tp: Math.round(sensB * d), fp: h - Math.round(specB * h), fn: d - Math.round(sensB * d), tn: Math.round(specB * h) });
       }
     }
-  }, [sameProportions, valuesB]);
+  }, [sameProportions, valuesB, setValuesA, setValuesB, showTrajectoryA, dPrimeA, diseasedA, healthyA]);
 
   const handleDragB = useCallback((newValues: CellValues) => {
     setValuesB(newValues);
@@ -361,7 +375,7 @@ export function Lesson9_Compare({
         setValuesA({ tp: Math.round(sensA * d), fp: h - Math.round(specA * h), fn: d - Math.round(sensA * d), tn: Math.round(specA * h) });
       }
     }
-  }, [sameProportions, valuesA]);
+  }, [sameProportions, valuesA, setValuesA, setValuesB]);
 
   // Auto-magnification for low prevalence
   const autoMag = useMemo(() => {
@@ -379,16 +393,27 @@ export function Lesson9_Compare({
   const magA = useMemo<CellValues>(() => yMag <= 1 ? effectiveA : { tp: Math.round(effectiveA.tp * yMag), fp: effectiveA.fp, fn: Math.round(effectiveA.fn * yMag), tn: effectiveA.tn }, [effectiveA, yMag]);
   const magB = useMemo<CellValues>(() => yMag <= 1 ? effectiveB : { tp: Math.round(effectiveB.tp * yMag), fp: effectiveB.fp, fn: Math.round(effectiveB.fn * yMag), tn: effectiveB.tn }, [effectiveB, yMag]);
 
-  // Tight zoom: fit closely around both magnified boxes
+  // Tight zoom: fit closely around both magnified boxes + trajectory extents
   const fixedLayout = useMemo(() => {
-    const maxValues: CellValues = {
-      tp: Math.max(magA.tp, magB.tp),
-      fp: Math.max(magA.fp, magB.fp),
-      fn: Math.max(magA.fn, magB.fn),
-      tn: Math.max(magA.tn, magB.tn),
+    let maxTp = Math.max(magA.tp, magB.tp);
+    let maxFp = Math.max(magA.fp, magB.fp);
+    let maxFn = Math.max(magA.fn, magB.fn);
+    let maxTn = Math.max(magA.tn, magB.tn);
+    // Expand for trajectories
+    const expandForTrajectory = (traj: { sensitivity: number; specificity: number }[], dis: number, hlt: number, ym: number) => {
+      for (const p of traj) {
+        const tp = Math.round(p.sensitivity * dis) * ym;
+        const fp = Math.round((1 - p.specificity) * hlt);
+        const fn = Math.round((1 - p.sensitivity) * dis) * ym;
+        const tn = Math.round(p.specificity * hlt);
+        maxTp = Math.max(maxTp, tp); maxFp = Math.max(maxFp, fp);
+        maxFn = Math.max(maxFn, fn); maxTn = Math.max(maxTn, tn);
+      }
     };
-    return computeLayout(maxValues, 560, 500, 65);
-  }, [magA, magB]);
+    if (showTrajectoryA) expandForTrajectory(trajectoryA, diseasedA, healthyA, yMag);
+    if (showTrajectoryB) expandForTrajectory(trajectoryB, diseasedB, healthyB, yMag);
+    return computeLayout({ tp: maxTp, fp: maxFp, fn: maxFn, tn: maxTn }, 560, 500, 65);
+  }, [magA, magB, showTrajectoryA, showTrajectoryB, trajectoryA, trajectoryB, diseasedA, healthyA, diseasedB, healthyB, yMag]);
 
   const loadPreset = (idx: number) => {
     const p = COMPARISON_PRESETS[idx];
@@ -403,16 +428,46 @@ export function Lesson9_Compare({
     <LessonLayout
       meta={{ number: 7, title: "Compare Two Tests", subtitle: "Same population, different tests — which is better?" }}
       totalLessons={totalLessons} onPrev={onPrev} onNext={onNext} onHome={onHome} onGoTo={onGoTo}
-      lessonTitles={lessonTitles} costState={costState} values={effectiveA}
+      lessonTitles={lessonTitles} costState={costState} testToggle={testToggle} values={effectiveA}
       diagramFooter={
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-black">
             <label className="flex items-center gap-1.5">
               <input type="checkbox" checked={sameProportions} onChange={(e) => setSameProportions(e.target.checked)}
                 className="accent-indigo-500" />
-              <span>Same population proportions <span className="text-black">&mdash; editing one adjusts the other</span></span>
+              <span>Same population proportions</span>
+            </label>
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" checked={showTrajectoryA} onChange={(e) => setShowTrajectoryA(e.target.checked)}
+                className="accent-blue-500" />
+              <span style={{ color: "#2563eb" }}>Trajectory A</span>
+            </label>
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" checked={showTrajectoryB} onChange={(e) => setShowTrajectoryB(e.target.checked)}
+                className="accent-orange-500" />
+              <span style={{ color: "#ea580c" }}>Trajectory B</span>
             </label>
           </div>
+          {(showTrajectoryA || showTrajectoryB) && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 space-y-1">
+              <p className="text-xs text-amber-700 italic">
+                Modeled trajectories (fictional). For real data, go to <strong>Curve Data</strong>.
+                When a trajectory is active, dragging that test's box is constrained to the curve.
+              </p>
+              {showTrajectoryA && (
+                <div className="text-xs text-black">
+                  <span style={{ color: "#2563eb" }} className="font-semibold">{labelA}:</span>{" "}
+                  AUC {aucA.toFixed(3)} &middot; TAI {taiA.toFixed(3)} &middot; CDI {cdiA.toFixed(3)}
+                </div>
+              )}
+              {showTrajectoryB && (
+                <div className="text-xs text-black">
+                  <span style={{ color: "#ea580c" }} className="font-semibold">{labelB}:</span>{" "}
+                  AUC {aucB.toFixed(3)} &middot; TAI {taiB.toFixed(3)} &middot; CDI {cdiB.toFixed(3)}
+                </div>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <EditableCompactTable values={valuesA} color="#2563eb" label={labelA} onChange={handleChangeA} stats={statsA} costState={costState} />
             <EditableCompactTable values={valuesB} color="#ea580c" label={labelB} onChange={handleChangeB} stats={statsB} costState={costState} />
@@ -434,13 +489,11 @@ export function Lesson9_Compare({
       diagram={
         <TruthDiagram
           values={magA}
-          onDrag={costState.costMode ? undefined : (newMagValues) => {
-            // Convert magnified drag values back to real values
-            if (yMag > 1) {
-              handleDragA({ tp: Math.round(newMagValues.tp / yMag), fp: newMagValues.fp, fn: Math.round(newMagValues.fn / yMag), tn: newMagValues.tn });
-            } else {
-              handleDragA(newMagValues);
-            }
+          onDrag={(newMagValues) => {
+            const raw = yMag > 1
+              ? { tp: Math.round(newMagValues.tp / yMag), fp: newMagValues.fp, fn: Math.round(newMagValues.fn / yMag), tn: newMagValues.tn }
+              : newMagValues;
+            handleDragA(raw);
           }}
           overlays={[]}
           fixedLayout={fixedLayout}
@@ -458,22 +511,44 @@ export function Lesson9_Compare({
             tn: Math.max(effectiveA.tn, effectiveB.tn),
           }}
           renderExtraSvg={(layout) => {
-            const ulA = toSvg(-magA.fp, magA.tp, layout.centerX, layout.centerY, layout.scale);
+            const { centerX: cx, centerY: cy, scale: s } = layout;
+            const ulA = toSvg(-magA.fp, magA.tp, cx, cy, s);
+
+            // Helper to render a trajectory curve
+            const renderTrajectory = (
+              traj: { sensitivity: number; specificity: number }[],
+              dis: number, hlt: number, color: string, yM: number
+            ) => {
+              if (traj.length === 0) return null;
+              const pts = traj.map((p) => {
+                const tpVal = Math.round(p.sensitivity * dis) * yM;
+                const fpVal = Math.round((1 - p.specificity) * hlt);
+                return toSvg(-fpVal, tpVal, cx, cy, s);
+              });
+              let pathD = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+              for (let i = 1; i < pts.length; i++) {
+                pathD += ` L${pts[i].x.toFixed(1)},${pts[i].y.toFixed(1)}`;
+              }
+              return <path d={pathD} fill="none" stroke={color} strokeWidth={2.5} opacity={0.7} />;
+            };
+
             return (
               <g>
+                {showTrajectoryA && renderTrajectory(trajectoryA, diseasedA, healthyA, "#2563eb", yMag)}
+                {showTrajectoryB && renderTrajectory(trajectoryB, diseasedB, healthyB, "#ea580c", yMag)}
                 <text
                   x={ulA.x + 4} y={ulA.y + 14}
                   fontSize={13} fontWeight={700} fill="#2563eb">{labelA}</text>
                 <DraggableSecondBox
-                  values={magB} centerX={layout.centerX} centerY={layout.centerY}
-                  scale={layout.scale} color="#ea580c" label={labelB}
+                  values={magB} centerX={cx} centerY={cy}
+                  scale={s} color="#ea580c" label={labelB}
                   showCorners={!sameProportions}
                   onDrag={(newMagValues) => {
-                    if (yMag > 1) {
-                      handleDragB({ tp: Math.round(newMagValues.tp / yMag), fp: newMagValues.fp, fn: Math.round(newMagValues.fn / yMag), tn: newMagValues.tn });
-                    } else {
-                      handleDragB(newMagValues);
-                    }
+                    const raw = yMag > 1
+                      ? { tp: Math.round(newMagValues.tp / yMag), fp: newMagValues.fp, fn: Math.round(newMagValues.fn / yMag), tn: newMagValues.tn }
+                      : newMagValues;
+                    const snapped = showTrajectoryB ? snapToTrajectory(raw, dPrimeB, diseasedB, healthyB) : raw;
+                    handleDragB(snapped);
                   }} />
               </g>
             );

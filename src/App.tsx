@@ -15,7 +15,8 @@ import { Lesson9_Compare } from "./components/Lessons/Lesson9_Compare";
 import { LessonCurveInput } from "./components/Lessons/LessonCurveInput";
 import { useDiagramState } from "./hooks/useDiagramState";
 import { computeStats } from "./utils/statistics";
-import type { CostWeights, CostState } from "./components/Lessons/lessonTypes";
+import type { CostWeights, CostState, TestToggleState } from "./components/Lessons/lessonTypes";
+import type { CellValues } from "./utils/statistics";
 
 const TOTAL_LESSONS = 9;
 
@@ -103,7 +104,20 @@ function AppShell({ children, costMode, setCostMode, hideCostToggle }: { childre
 }
 
 function App() {
-  const { values, stats, setValues, setValue } = useDiagramState();
+  // Test A (default)
+  const { values: valuesA, stats: statsA, setValues: setValuesA, setValue: setValueA } = useDiagramState();
+  // Test B (optional second test)
+  // Test B default: same population (50 diseased, 150 healthy) but
+  // a mediocre test (~60% sens, ~60% spec) — clearly worse than Test A
+  const [valuesB, setValuesB] = useState<CellValues>({ tp: 30, fp: 60, fn: 20, tn: 90 });
+  const setValueB = useCallback(
+    (key: keyof CellValues, val: number) => setValuesB((prev) => ({ ...prev, [key]: Math.max(0, Math.round(val)) })),
+    []
+  );
+  const statsB = useMemo(() => computeStats(valuesB), [valuesB]);
+  const [hasTestB, setHasTestB] = useState(true);
+  const [activeTest, setActiveTest] = useState<"A" | "B">("A");
+
   const [currentLesson, setCurrentLesson] = useState<number>(-1);
 
   // Cost state
@@ -113,6 +127,12 @@ function App() {
     (key: keyof CostWeights, val: number) => setCosts((prev) => ({ ...prev, [key]: val })),
     []
   );
+
+  // Active test values — Test A is default, Test B only when toggled
+  const values = activeTest === "B" && hasTestB ? valuesB : valuesA;
+  const stats = activeTest === "B" && hasTestB ? statsB : statsA;
+  const setValues = activeTest === "B" && hasTestB ? setValuesB : setValuesA;
+  const setValue = activeTest === "B" && hasTestB ? setValueB : setValueA;
 
   // Cost-weighted values — these become THE cell values when cost mode is on
   const effectiveValues = useMemo(() =>
@@ -128,18 +148,30 @@ function App() {
     subjectValues: costMode ? values : undefined,
   };
 
+  const testToggle: TestToggleState = {
+    activeTest,
+    setActiveTest,
+    hasTestB,
+  };
+
   const goHome = () => setCurrentLesson(0);
   const goPrev = () => setCurrentLesson((n) => Math.max(1, n - 1));
   const goNext = () => setCurrentLesson((n) => Math.min(TOTAL_LESSONS, n + 1));
+  const goToLesson = useCallback((n: number) => {
+    // Auto-enable Test B when visiting Compare page
+    if (n === 7 && !hasTestB) setHasTestB(true);
+    setCurrentLesson(n);
+  }, [hasTestB]);
 
   const navProps = {
     totalLessons: TOTAL_LESSONS,
     onPrev: goPrev,
     onNext: goNext,
     onHome: goHome,
-    onGoTo: setCurrentLesson,
+    onGoTo: goToLesson,
     lessonTitles: LESSON_TITLES,
     costState,
+    testToggle,
   };
   const dataProps = { values: effectiveValues, stats: effectiveStats, setValue, setValues };
 
@@ -154,7 +186,7 @@ function App() {
   // Lesson 1: Sensitivity & Specificity
   if (currentLesson === 1) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode}>
+      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
         <Lesson3_SensSpec key="lesson1" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -162,7 +194,7 @@ function App() {
   // Lesson 2: Predictive Values
   if (currentLesson === 2) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode}>
+      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
         <Lesson4_PredValues key="lesson2" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -170,7 +202,7 @@ function App() {
   // Lesson 3: Diagnostic Odds Ratio
   if (currentLesson === 3) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode}>
+      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
         <LessonOddsRatio key="lesson3" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -178,7 +210,7 @@ function App() {
   // Lesson 4: Likelihood Ratios & Bayes
   if (currentLesson === 4) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode}>
+      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
         <Lesson6_LikelihoodRatios key="lesson4" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -186,7 +218,7 @@ function App() {
   // Lesson 5: Chi-Square Test
   if (currentLesson === 5) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode}>
+      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
         <Lesson7_ChiSquare key="lesson5" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -194,7 +226,7 @@ function App() {
   // Lesson 6: ROC Curves
   if (currentLesson === 6) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode}>
+      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
         <Lesson5_Trajectory key="lesson6" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -202,15 +234,17 @@ function App() {
   // Lesson 7: Compare Two Tests
   if (currentLesson === 7) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode}>
-        <Lesson9_Compare key="lesson7" {...navProps} {...dataProps} />
+      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
+        <Lesson9_Compare key="lesson7" {...navProps} {...dataProps}
+          valuesA={valuesA} valuesB={valuesB} statsA={statsA} statsB={statsB}
+          setValuesA={setValuesA} setValuesB={setValuesB} setValueA={setValueA} setValueB={setValueB} />
       </AppShell>
     );
   }
   // Lesson 8: Curve Data
   if (currentLesson === 8) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode}>
+      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
         <LessonCurveInput key="lesson8" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -218,7 +252,7 @@ function App() {
   // Lesson 9: Summary
   if (currentLesson === 9) {
     return (
-      <AppShell costMode={costMode} setCostMode={setCostMode}>
+      <AppShell costMode={costMode} setCostMode={setCostMode} hideCostToggle>
         <Lesson8_Sandbox key="lesson9" {...navProps} {...dataProps} />
       </AppShell>
     );
@@ -227,12 +261,12 @@ function App() {
   // Home view
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header costMode={costMode} setCostMode={setCostMode} />
+      <Header costMode={costMode} setCostMode={setCostMode} hideCostToggle />
       <main className="max-w-7xl mx-auto px-6 py-6">
         {/* Introduction button */}
         <div className="mb-4">
           <button
-            onClick={() => setCurrentLesson(-1)}
+            onClick={() => goToLesson(-1)}
             className="w-full flex items-center gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 hover:shadow-md transition-all text-left"
           >
             <span className="text-2xl">{"\uD83D\uDCD6"}</span>
@@ -262,7 +296,7 @@ function App() {
             ].map((lesson) => (
               <button
                 key={lesson.n}
-                onClick={() => setCurrentLesson(lesson.n)}
+                onClick={() => goToLesson(lesson.n)}
                 className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all text-left"
               >
                 <span className="text-2xl">{lesson.icon}</span>

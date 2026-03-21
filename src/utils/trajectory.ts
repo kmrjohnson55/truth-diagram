@@ -267,3 +267,43 @@ export function thresholdFromSensitivity(
   const s = Math.max(0.001, Math.min(0.999, sensitivity));
   return dPrime / 2 - normalQuantile(s);
 }
+
+/**
+ * Snap proposed cell values to the closest point on a trajectory curve.
+ *
+ * When the trajectory is active, the upper-left corner (-fp, tp) must lie
+ * on the trajectory. This function finds the trajectory point whose UL corner
+ * is nearest to the proposed UL corner and returns the corresponding CellValues.
+ *
+ * Population sizes (diseased, healthy) are held constant.
+ */
+export function snapToTrajectory(
+  proposed: CellValues,
+  dPrime: number,
+  diseased: number,
+  healthy: number,
+  steps = 400
+): CellValues {
+  const half = dPrime / 2;
+  let bestDist = Infinity;
+  let bestValues: CellValues = proposed;
+
+  const proposedTp = proposed.tp;
+  const proposedFp = proposed.fp;
+
+  for (let i = 0; i <= steps; i++) {
+    const t = -4 + (8 * i) / steps;
+    const sens = normalCDF(half - t);
+    const spec = normalCDF(half + t);
+    const tp = Math.round(sens * diseased);
+    const fp = Math.round((1 - spec) * healthy);
+    // Distance in UL corner space: (-fp, tp) vs (-proposedFp, proposedTp)
+    const dist = (fp - proposedFp) ** 2 + (tp - proposedTp) ** 2;
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestValues = { tp, fp, fn: diseased - tp, tn: healthy - fp };
+    }
+  }
+
+  return bestValues;
+}

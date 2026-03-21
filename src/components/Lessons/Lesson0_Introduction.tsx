@@ -24,6 +24,7 @@ export function Lesson0_Introduction({
   onGoTo,
   lessonTitles,
   costState,
+  testToggle,
 }: IntroProps) {
   // Fixed wider layout — disable auto-zoom, use generous padding
   // Only re-compute if values grow beyond the fixed extent (anti-clipping)
@@ -64,6 +65,7 @@ export function Lesson0_Introduction({
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       costState={costState}
+      testToggle={testToggle}
       diagramFooter={
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Left: 2×2 table */}

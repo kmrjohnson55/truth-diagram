@@ -14,7 +14,7 @@ interface Lesson4Props extends LessonNavProps {
   setValues: (v: CellValues) => void;
 }
 
-export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState }: Lesson4Props) {
+export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState, testToggle }: Lesson4Props) {
   const [activeView, setActiveView] = useState<"ppv" | "npv">("ppv");
   const [showLowPrev, setShowLowPrev] = useState(false);
 
@@ -50,6 +50,7 @@ export function Lesson4_PredValues({ values, stats, setValue, setValues, totalLe
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       costState={costState}
+      testToggle={testToggle}
       values={values}
       diagramFooter={
         !showLowPrev ? <TwoByTwoTable values={values} setValue={setValue} setValues={setValues} costState={costState} dimCells={dimCells} /> : undefined

@@ -8,6 +8,7 @@ import {
   trajectoryPoint,
   generateTrajectory,
   thresholdFromSensitivity,
+  snapToTrajectory,
   computeAUC,
   computeTAI,
   computeCDISimple,
@@ -120,6 +121,7 @@ export function Lesson5_Trajectory({
   onGoTo,
   lessonTitles,
   costState,
+  testToggle,
 }: Lesson5Props) {
   const diseased = values.tp + values.fn;
   const healthy = values.fp + values.tn;
@@ -198,6 +200,7 @@ export function Lesson5_Trajectory({
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       costState={costState}
+      testToggle={testToggle}
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
@@ -269,7 +272,14 @@ export function Lesson5_Trajectory({
       diagram={
         <TruthDiagram
           values={sliderValues}
-          onDrag={costState.costMode ? undefined : setValues}
+          onDrag={(proposed) => {
+            // Constrain the box to the trajectory curve
+            const snapped = snapToTrajectory(proposed, dPrime, diseased, healthy);
+            setValues(snapped);
+            // Update threshold slider to match the snapped position
+            const newSens = diseased > 0 ? snapped.tp / diseased : 0;
+            setThreshold(thresholdFromSensitivity(dPrime, Math.max(0.001, Math.min(0.999, newSens))));
+          }}
           overlays={["sensitivity", "specificity"]}
           fixedLayout={fixedLayout}
           renderExtraSvg={(layout) => {

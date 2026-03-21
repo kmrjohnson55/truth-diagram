@@ -57,6 +57,7 @@ export function Lesson6_LikelihoodRatios({
   onGoTo,
   lessonTitles,
   costState,
+  testToggle,
 }: Lesson6Props) {
   const sub = costState.costMode ? <sub className="text-[9px] text-orange-500">cost</sub> : null;
   const [showBayesTooltip, setShowBayesTooltip] = useState(false);
@@ -87,6 +88,7 @@ export function Lesson6_LikelihoodRatios({
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       costState={costState}
+      testToggle={testToggle}
       values={values}
       diagramFooter={<TwoByTwoTable values={values} setValue={setValue} setValues={setValues} costState={costState} />}
       keyInsight={

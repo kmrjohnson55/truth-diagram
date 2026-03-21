@@ -14,7 +14,7 @@ interface Lesson3Props extends LessonNavProps {
   setValues: (v: CellValues) => void;
 }
 
-export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState }: Lesson3Props) {
+export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState, testToggle }: Lesson3Props) {
   const [activeView, setActiveView] = useState<"sensitivity" | "specificity">("sensitivity");
   const [showLowPrev, setShowLowPrev] = useState(false);
 
@@ -49,6 +49,7 @@ export function Lesson3_SensSpec({ values, stats, setValue, setValues, totalLess
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       costState={costState}
+      testToggle={testToggle}
       values={values}
       diagramFooter={
         <div className="space-y-3">

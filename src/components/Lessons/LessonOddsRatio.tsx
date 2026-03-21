@@ -12,7 +12,7 @@ interface LessonORProps extends LessonNavProps {
   setValues: (v: CellValues) => void;
 }
 
-export function LessonOddsRatio({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState }: LessonORProps) {
+export function LessonOddsRatio({ values, stats, setValue, setValues, totalLessons, onPrev, onNext, onHome, onGoTo, lessonTitles, costState, testToggle }: LessonORProps) {
   const sub = costState.costMode ? <sub className="text-[9px] text-orange-500">cost</sub> : null;
 
   const { tp, fp, fn, tn } = values;
@@ -30,6 +30,7 @@ export function LessonOddsRatio({ values, stats, setValue, setValues, totalLesso
       onGoTo={onGoTo}
       lessonTitles={lessonTitles}
       costState={costState}
+      testToggle={testToggle}
       values={values}
       diagramFooter={
         <TwoByTwoTable values={values} setValue={setValue} setValues={setValues} costState={costState} />
@@ -99,22 +100,6 @@ export function LessonOddsRatio({ values, stats, setValue, setValues, totalLesso
           As the box moves into the upper-right quadrant (a better test), the green area grows and the red area shrinks, so the odds ratio increases. A perfect test has an infinite odds ratio. The odds ratio also equals the positive likelihood ratio divided by the negative likelihood ratio (+LR / &minus;LR).
         </p>
 
-        {/* Formula */}
-        <div className="bg-purple-50 rounded-lg p-4 space-y-2">
-          <div className="text-sm font-mono text-purple-800">
-            DOR{sub} = (<span style={{ color: CELL_COLORS.tp }}>TP{sub}</span> &times; <span style={{ color: CELL_COLORS.tn }}>TN{sub}</span>) / (<span style={{ color: CELL_COLORS.fp }}>FP{sub}</span> &times; <span style={{ color: CELL_COLORS.fn }}>FN{sub}</span>)
-          </div>
-          <div className="text-sm font-mono text-purple-800">
-            = (<span style={{ color: CELL_COLORS.tp }}>{tp}</span> &times; <span style={{ color: CELL_COLORS.tn }}>{tn}</span>) / (<span style={{ color: CELL_COLORS.fp }}>{fp}</span> &times; <span style={{ color: CELL_COLORS.fn }}>{fn}</span>)
-          </div>
-          <div className="text-sm font-mono text-purple-800">
-            = <span style={{ color: "#16a34a" }}>{areaUpper.toLocaleString()}</span> / <span style={{ color: "#dc2626" }}>{areaLower.toLocaleString()}</span>
-          </div>
-          <div className="text-lg font-bold text-purple-700">
-            = {orValue === Infinity ? "\u221E" : orValue.toFixed(1)}
-          </div>
-        </div>
-
         {/* Area interpretation */}
         <div className="bg-slate-50 rounded-lg p-3 space-y-2 text-sm">
           <div className="flex justify-between items-center">
@@ -130,6 +115,22 @@ export function LessonOddsRatio({ values, stats, setValue, setValues, totalLesso
               Lower-left area (FP &times; FN):
             </span>
             <span className="font-bold" style={{ color: "#dc2626" }}>{areaLower.toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* Formula */}
+        <div className="bg-purple-50 rounded-lg p-4 space-y-2">
+          <div className="text-sm font-mono text-purple-800">
+            DOR{sub} = (<span style={{ color: CELL_COLORS.tp }}>TP{sub}</span> &times; <span style={{ color: CELL_COLORS.tn }}>TN{sub}</span>) / (<span style={{ color: CELL_COLORS.fp }}>FP{sub}</span> &times; <span style={{ color: CELL_COLORS.fn }}>FN{sub}</span>)
+          </div>
+          <div className="text-sm font-mono text-purple-800">
+            = (<span style={{ color: CELL_COLORS.tp }}>{tp}</span> &times; <span style={{ color: CELL_COLORS.tn }}>{tn}</span>) / (<span style={{ color: CELL_COLORS.fp }}>{fp}</span> &times; <span style={{ color: CELL_COLORS.fn }}>{fn}</span>)
+          </div>
+          <div className="text-sm font-mono text-purple-800">
+            = <span style={{ color: "#16a34a" }}>{areaUpper.toLocaleString()}</span> / <span style={{ color: "#dc2626" }}>{areaLower.toLocaleString()}</span>
+          </div>
+          <div className="text-lg font-bold text-purple-700">
+            = {orValue === Infinity ? "\u221E" : orValue.toFixed(1)}
           </div>
         </div>
 
