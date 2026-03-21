@@ -273,12 +273,11 @@ export function Lesson5_Trajectory({
         <TruthDiagram
           values={sliderValues}
           onDrag={(proposed) => {
-            // Constrain the box to the trajectory curve
+            // Constrain to trajectory: only change threshold, keep d' fixed
             const snapped = snapToTrajectory(proposed, dPrime, diseased, healthy);
-            setValues(snapped);
-            // Update threshold slider to match the snapped position
             const newSens = diseased > 0 ? snapped.tp / diseased : 0;
             setThreshold(thresholdFromSensitivity(dPrime, Math.max(0.001, Math.min(0.999, newSens))));
+            // sliderValues will update from new threshold, keeping trajectory stable
           }}
           overlays={["sensitivity", "specificity"]}
           fixedLayout={fixedLayout}

@@ -68,7 +68,7 @@ export function Lesson6_LikelihoodRatios({
 
   const pretestOdds = healthy > 0 ? diseased / healthy : Infinity;
   const posttestOddsPos = fp > 0 ? tp / fp : Infinity;
-  const posttestOddsNeg = tn > 0 ? fn / tn : 0;
+  const posttestOddsNeg = tn > 0 ? fn / tn : (fn > 0 ? Infinity : 0);
   const posLR = stats.positiveLR;
   const negLR = stats.negativeLR;
   const posQ = posLRQuality(posLR);
