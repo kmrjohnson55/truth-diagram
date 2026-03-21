@@ -326,6 +326,10 @@ export function Lesson8_Sandbox({
           </div>
         </div>
 
+        {costState.costMode && (
+          <SpendingEfficiency value={formatStat(stats.accuracy)} />
+        )}
+
         <hr className="border-slate-100" />
 
         {/* Trajectory / ROC panels */}
@@ -399,6 +403,41 @@ export function Lesson8_Sandbox({
         })()}
       </div>
     </LessonLayout>
+  );
+}
+
+/* ─── Spending Efficiency callout (cost mode only) ─── */
+
+function SpendingEfficiency({ value }: { value: string }) {
+  const [showTip, setShowTip] = useState(false);
+  return (
+    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-2 relative">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-bold text-orange-800">Spending Efficiency</span>
+          <span
+            className="inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold text-orange-400 bg-orange-100 border border-orange-300 rounded-full cursor-help select-none"
+            onMouseEnter={() => setShowTip(true)}
+            onMouseLeave={() => setShowTip(false)}
+          >?</span>
+        </div>
+        <span className="text-lg font-bold text-orange-700 tabular-nums">{value}</span>
+      </div>
+      {showTip && (
+        <div className="absolute left-0 top-full mt-1 z-50 w-72 p-3 text-xs text-slate-700 bg-white border border-slate-200 rounded-lg shadow-lg leading-relaxed">
+          <p className="font-semibold text-orange-700 mb-1">Spending Efficiency</p>
+          <p className="mb-1.5">
+            The percentage of total testing expenditure that produced the correct answer &mdash;
+            i.e., dollars spent on true positives plus true negatives, divided by
+            total dollars spent across all four cells.
+          </p>
+          <p>
+            This is the cost-weighted analog of Accuracy. A higher value means more
+            of your testing budget is yielding correct classifications.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -96,7 +96,7 @@ export function LessonLayout({
           );
         })}
         <div className="ml-auto shrink-0 flex items-center gap-2">
-          {testToggle && testToggle.hasTestB && meta.number !== 7 && (
+          {testToggle && testToggle.hasTestB && meta.number !== 7 && meta.number !== 8 && (
             <div className="flex items-center gap-1 bg-slate-50 rounded-full px-1 py-0.5 border border-slate-200">
               <button
                 onClick={() => testToggle.setActiveTest("A")}

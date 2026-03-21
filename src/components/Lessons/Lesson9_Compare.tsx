@@ -593,6 +593,23 @@ export function Lesson9_Compare({
           </div>
         </div>
 
+        {costState.costMode && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+            <div className="text-xs font-bold text-orange-800 mb-1.5">Spending Efficiency</div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex justify-between">
+                <span style={{ color: "#2563eb" }} className="font-semibold">{labelA}:</span>
+                <span className="font-bold text-orange-700 tabular-nums">{formatStat(statsA.accuracy)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: "#ea580c" }} className="font-semibold">{labelB}:</span>
+                <span className="font-bold text-orange-700 tabular-nums">{formatStat(statsB.accuracy)}</span>
+              </div>
+            </div>
+            <p className="text-xs text-orange-700 mt-1">% of testing expenditure that produced the correct answer.</p>
+          </div>
+        )}
+
         {/* Basic comparison table */}
         <div>
           <h3 className="text-xs font-semibold text-black uppercase tracking-wide mb-2">

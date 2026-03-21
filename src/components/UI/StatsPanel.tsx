@@ -172,6 +172,18 @@ export function StatsPanel({ stats, costMode, values, costs }: StatsPanelProps) 
         ))}
       </div>
 
+      {showCosts && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-orange-800">Spending Efficiency</span>
+            <span className="text-lg font-bold text-orange-700 tabular-nums">{formatStat(displayStats.accuracy)}</span>
+          </div>
+          <p className="text-xs text-orange-700 mt-1">
+            Percentage of testing expenditure that produced the correct answer.
+          </p>
+        </div>
+      )}
+
       <div className="pt-2 text-xs text-black">
         Total {showCosts ? "cost" : "subjects"}: {showCosts && costBreakdown ? costBreakdown.total.toLocaleString() : stats.total}
       </div>
