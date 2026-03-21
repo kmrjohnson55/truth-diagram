@@ -12,11 +12,12 @@ import { Lesson6_LikelihoodRatios } from "./components/Lessons/Lesson6_Likelihoo
 import { Lesson7_ChiSquare } from "./components/Lessons/Lesson7_ChiSquare";
 import { Lesson8_Sandbox } from "./components/Lessons/Lesson8_Sandbox";
 import { Lesson9_Compare } from "./components/Lessons/Lesson9_Compare";
+import { LessonCurveInput } from "./components/Lessons/LessonCurveInput";
 import { useDiagramState } from "./hooks/useDiagramState";
 import { computeStats } from "./utils/statistics";
 import type { CostWeights, CostState } from "./components/Lessons/lessonTypes";
 
-const TOTAL_LESSONS = 8;
+const TOTAL_LESSONS = 9;
 
 const LESSON_TITLES = [
   "Sensitivity & Specificity",
@@ -26,6 +27,7 @@ const LESSON_TITLES = [
   "Chi-Square Test",
   "ROC Curves",
   "Compare Two Tests",
+  "Curve Data",
   "Summary",
 ];
 
@@ -205,11 +207,19 @@ function App() {
       </AppShell>
     );
   }
-  // Lesson 8: Summary
+  // Lesson 8: Curve Data
   if (currentLesson === 8) {
     return (
       <AppShell costMode={costMode} setCostMode={setCostMode}>
-        <Lesson8_Sandbox key="lesson8" {...navProps} {...dataProps} />
+        <LessonCurveInput key="lesson8" {...navProps} {...dataProps} />
+      </AppShell>
+    );
+  }
+  // Lesson 9: Summary
+  if (currentLesson === 9) {
+    return (
+      <AppShell costMode={costMode} setCostMode={setCostMode}>
+        <Lesson8_Sandbox key="lesson9" {...navProps} {...dataProps} />
       </AppShell>
     );
   }
@@ -247,7 +257,8 @@ function App() {
               { n: 5, title: "Chi-Square Test", icon: "\uD83D\uDCD0" },
               { n: 6, title: "ROC Curves", icon: "\uD83D\uDCC8" },
               { n: 7, title: "Compare Two Tests", icon: "\uD83D\uDD0D" },
-              { n: 8, title: "Summary", icon: "\uD83E\uDDEA" },
+              { n: 8, title: "Curve Data", icon: "\uD83D\uDCC1" },
+              { n: 9, title: "Summary", icon: "\uD83E\uDDEA" },
             ].map((lesson) => (
               <button
                 key={lesson.n}

@@ -9,6 +9,8 @@ import {
   generateTrajectory,
   thresholdFromSensitivity,
   computeAUC,
+  computeTAI,
+  computeCDISimple,
 } from "../../utils/trajectory";
 import { computeLayout, toSvg } from "../../utils/geometry";
 import type { CellValues, DiagnosticStats } from "../../utils/statistics";
@@ -70,14 +72,11 @@ function RocCurve({
     ` L${tx(1 - last.specificity).toFixed(1)},${ty(0).toFixed(1)}` +
     ` L${tx(1 - first.specificity).toFixed(1)},${ty(0).toFixed(1)} Z`;
 
-  // Grid lines at 0.25, 0.5, 0.75
   const gridTicks = [0.25, 0.5, 0.75];
 
   return (
     <svg viewBox={`0 0 ${ROC_SIZE} ${ROC_SIZE}`} style={{ width: "100%", maxWidth: ROC_SIZE, background: "white", borderRadius: 8 }}>
       <rect width={ROC_SIZE} height={ROC_SIZE} fill="white" rx={8} />
-
-      {/* Grid lines */}
       {gridTicks.map((v) => (
         <g key={v}>
           <line x1={tx(v)} y1={ROC_PAD} x2={tx(v)} y2={ROC_SIZE - ROC_PAD}
@@ -88,26 +87,16 @@ function RocCurve({
           <text x={ROC_PAD - 4} y={ty(v) + 3} textAnchor="end" fontSize={8} fill="#94a3b8">{v.toFixed(2)}</text>
         </g>
       ))}
-
-      {/* Axes */}
       <line x1={ROC_PAD} y1={ROC_PAD} x2={ROC_PAD} y2={ROC_SIZE - ROC_PAD} stroke="#cbd5e1" strokeWidth={1} />
       <line x1={ROC_PAD} y1={ROC_SIZE - ROC_PAD} x2={ROC_SIZE - ROC_PAD} y2={ROC_SIZE - ROC_PAD} stroke="#cbd5e1" strokeWidth={1} />
-
-      {/* Chance line */}
       <line x1={ROC_PAD} y1={ROC_SIZE - ROC_PAD} x2={ROC_SIZE - ROC_PAD} y2={ROC_PAD}
         stroke="#ef4444" strokeWidth={1} strokeDasharray="4 3" opacity={0.5} />
-
-      {/* AUC fill + curve */}
       <path d={fillD} fill="#4f46e5" opacity={0.08} />
       <path d={pathD} fill="none" stroke="#4f46e5" strokeWidth={2} />
-
-      {/* Current operating point */}
       <circle cx={tx(currentFpr)} cy={ty(currentSens)} r={5}
         fill="#4f46e5" stroke="white" strokeWidth={1.5} />
-
-      {/* Axis labels */}
       <text x={ROC_SIZE / 2} y={ROC_SIZE - 6} textAnchor="middle" fontSize={10} fill="#94a3b8">
-        1 − Specificity (FPR)
+        1 &minus; Specificity (FPR)
       </text>
       <text x={10} y={ROC_SIZE / 2} textAnchor="middle" fontSize={10} fill="#94a3b8"
         transform={`rotate(-90, 10, ${ROC_SIZE / 2})`}>
@@ -163,7 +152,11 @@ export function Lesson5_Trajectory({
   );
 
   const auc = useMemo(() => computeAUC(trajectory), [trajectory]);
+  const tai = useMemo(() => computeTAI(trajectory, diseased, healthy), [trajectory, diseased, healthy]);
+  const cdi = useMemo(() => computeCDISimple(trajectory, diseased, healthy), [trajectory, diseased, healthy]);
   const aucQ = aucQuality(auc);
+  const taiQ = aucQuality(tai); // same scale
+  const cdiQ = aucQuality(cdi);
   const dpQ = dPrimeQuality(dPrime);
 
   // Trajectory points for truth diagram (UL corner path)
@@ -175,7 +168,7 @@ export function Lesson5_Trajectory({
     });
   }, [trajectory, diseased, healthy]);
 
-  // Fixed layout — compute actual extent from trajectory points
+  // Fixed layout
   const fixedLayout = useMemo(() => {
     let maxTp = 0, maxFp = 0, maxFn = 0, maxTn = 0;
     for (const p of trajectory) {
@@ -208,15 +201,71 @@ export function Lesson5_Trajectory({
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
-            <strong>Key insight:</strong> The truth diagram and ROC curve contain
-            similar information, but the diagram preserves{" "}
-            <em>prevalence</em> (the box shape), which the ROC curve discards.
-            This means the ROC curve ignores predictive values.
+            <strong>Key insight:</strong> The ROC curve is often used to assess the value of a diagnostic test. The truth diagram and ROC curve contain similar information, but the diagram preserves <em>prevalence</em> (the box shape) and uses absolute subject counts, which the ROC curve discards. If you have the test trajectory on the truth diagram, you can always construct the ROC curve; but given only the ROC curve, you cannot reconstruct the trajectory without knowing the group sizes.
           </p>
         </div>
       }
       values={values}
-      diagramFooter={<TwoByTwoTable values={sliderValues} setValue={setValue} setValues={setValues} costState={costState} />}
+      diagramFooter={
+        <div className="space-y-3">
+          <div className="flex gap-3">
+            {/* ROC curve on left */}
+            <div className="shrink-0">
+              <RocCurve
+                trajectory={trajectory}
+                currentSens={sliderStats.sensitivity}
+                currentFpr={1 - sliderStats.specificity}
+              />
+            </div>
+            {/* Metrics on right */}
+            <div className="flex-1 space-y-2 text-sm text-black">
+              {/* ROC-based metrics */}
+              <div className="rounded-lg p-2" style={{ backgroundColor: aucQ.bg }}>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold" style={{ color: aucQ.color }}>AUC = {auc.toFixed(3)}</span>
+                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: aucQ.color }}>{aucQ.label}</span>
+                </div>
+                <p className="text-xs leading-relaxed mt-0.5 text-black">
+                  Area Under the ROC Curve. Ignores prevalence.
+                </p>
+                <p className="text-xs text-black mt-0.5 opacity-60">&lt;0.7 poor &middot; 0.7–0.8 fair &middot; 0.8–0.9 good &middot; &ge;0.9 excellent</p>
+              </div>
+              <div className="rounded-lg p-2" style={{ backgroundColor: dpQ.bg }}>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold" style={{ color: dpQ.color }}>d&prime; = {dPrime.toFixed(2)}</span>
+                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: dpQ.color }}>{dpQ.label}</span>
+                </div>
+                <p className="text-xs leading-relaxed mt-0.5 text-black">
+                  Separation between diseased and healthy distributions (signal detection theory).
+                </p>
+                <p className="text-xs text-black mt-0.5 opacity-60">&lt;1 poor &middot; 1–2 fair &middot; 2–3 good &middot; &ge;3 excellent</p>
+              </div>
+              {/* Trajectory-based metrics */}
+              <div className="rounded-lg p-2 border border-indigo-200 bg-indigo-50">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-indigo-700">TAI = {tai.toFixed(3)}</span>
+                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: taiQ.color }}>{taiQ.label}</span>
+                </div>
+                <p className="text-xs leading-relaxed mt-0.5 text-black">
+                  <strong>Trajectory Area Index.</strong> Like AUC but prevalence-sensitive.
+                </p>
+                <p className="text-xs text-black mt-0.5 opacity-60">&lt;0.7 poor &middot; 0.7–0.8 fair &middot; 0.8–0.9 good &middot; &ge;0.9 excellent</p>
+              </div>
+              <div className="rounded-lg p-2 border border-purple-200 bg-purple-50">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-purple-700">CDI = {cdi.toFixed(3)}</span>
+                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: cdiQ.color }}>{cdiQ.label}</span>
+                </div>
+                <p className="text-xs leading-relaxed mt-0.5 text-black">
+                  <strong>Clinical Discrimination Index.</strong> Average PPV and NPV across all thresholds. Prevalence-sensitive.
+                </p>
+                <p className="text-xs text-black mt-0.5 opacity-60">&lt;0.7 poor &middot; 0.7–0.8 fair &middot; 0.8–0.9 good &middot; &ge;0.9 excellent</p>
+              </div>
+            </div>
+          </div>
+          <TwoByTwoTable values={sliderValues} setValue={setValue} setValues={setValues} costState={costState} />
+        </div>
+      }
       diagram={
         <TruthDiagram
           values={sliderValues}
@@ -257,6 +306,20 @@ export function Lesson5_Trajectory({
           }}
           belowDiagramText={
             <div className="space-y-2">
+              <div className="flex items-center justify-center gap-4 text-xs text-black">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block w-5 h-0.5 rounded" style={{ background: "#eab308" }} />
+                  <span><strong className="text-yellow-600">Yellow</strong> = test trajectory</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block w-5 h-0.5 rounded border-t border-dashed border-red-400" />
+                  <span><strong className="text-red-500">Red</strong> = chance</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-800" />
+                  <span><strong>Dot</strong> = current threshold</span>
+                </div>
+              </div>
               <div className="bg-slate-50 rounded-lg p-2 mx-auto max-w-md">
                 <div className="flex items-center justify-between text-xs text-black mb-0.5">
                   <span>Threshold</span>
@@ -282,101 +345,90 @@ export function Lesson5_Trajectory({
       }
     >
       <div className="space-y-4">
-        {/* Threshold explanation */}
+        {/* Bold heading */}
+        <h2 className="text-xl font-bold text-black">Receiver Operating Curves (ROC)</h2>
+
+        {/* Threshold and trajectory explanation */}
         <div>
           <h3 className="text-xs font-bold text-black uppercase tracking-wide mb-1">
-            The Threshold
+            Thresholds and the Test Trajectory
           </h3>
           <p className="text-base text-black leading-relaxed">
             Many diagnostic tests produce a continuous measurement (e.g., blood glucose,
             PSA level, troponin). A <strong>threshold</strong> is chosen to classify results
-            as &ldquo;positive&rdquo; or &ldquo;negative.&rdquo; Lowering the threshold
-            catches more disease (higher sensitivity) but creates more false alarms (lower
-            specificity). The slider below the diagram controls this threshold.
+            as positive or negative. Lowering the threshold catches more disease
+            (higher sensitivity) but creates more false alarms (lower specificity).
+          </p>
+          <p className="text-base text-black leading-relaxed mt-2">
+            On the truth diagram, changing the threshold moves the box: lowering it
+            pushes the box upward and leftward (more TPs, more FPs), while raising it
+            pulls the box downward and rightward (fewer TPs, fewer FPs). The <strong>upper-left
+            corner</strong> of the box traces a curved path called the <strong className="text-yellow-600">test trajectory</strong> as the threshold sweeps across its full range. This trajectory is seldom a straight line because sensitivity and specificity change together in a coupled way.
+          </p>
+          <p className="text-base text-black leading-relaxed mt-2">
+            The <strong className="text-red-500">chance trajectory</strong> (red dashed diagonal)
+            represents a test with no discriminatory value &mdash; along this line, the
+            post-test probability of disease always equals the pre-test probability at every box position. The farther the
+            test trajectory deviates from the chance line toward the upper-right quadrant,
+            the better the test discriminates.
           </p>
         </div>
 
-        {/* Diagram legend */}
-        <div className="text-xs text-black space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-5 h-0.5 rounded" style={{ background: "#eab308" }} />
-            <span><strong className="text-yellow-600">Yellow curve</strong> = test trajectory (all possible thresholds)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-5 h-0.5 rounded border-t border-dashed border-red-400" />
-            <span><strong className="text-red-500">Red dashed</strong> = chance trajectory (no diagnostic value)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-800" />
-            <span><strong>Black dot</strong> = current operating point (threshold)</span>
-          </div>
+        {/* Trajectory vs ROC */}
+        <div>
+          <h3 className="text-xs font-bold text-black uppercase tracking-wide mb-1">
+            Trajectory vs. ROC Curve
+          </h3>
+          <p className="text-base text-black leading-relaxed">
+            The ROC curve and the test trajectory are generated by the same process &mdash;
+            sweeping the threshold and plotting sensitivity against the false-positive rate.
+            However, the ROC curve uses dimensionless proportions (rates), while the truth
+            diagram uses absolute subject counts. At 50% prevalence, the trajectory has precisely
+            the shape of the ROC curve (flipped left to right), but as prevalence deviates
+            from 50%, the trajectory is stretched or compressed along the hemiaxes.
+          </p>
+          <p className="text-base text-black leading-relaxed mt-2">
+            Critically, the truth diagram trajectory preserves <em>prevalence</em> and
+            shows <em>predictive values</em> directly, which the ROC curve discards. The
+            ROC curve&rsquo;s tendency to obscure the influence of prevalence can be a
+            liability &mdash; two populations with very different disease rates might produce identical
+            ROC curves but very different predictive values and clinical outcomes.
+          </p>
         </div>
 
-        {/* Live stats — 2×2 grid */}
+        {/* Live stats */}
         {(() => {
           const sub = costState.costMode ? <sub className="text-[9px] text-orange-500">cost</sub> : null;
           return (
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-green-50 rounded-lg p-2 text-center">
-                <div className="text-[10px] text-green-600 font-semibold uppercase">Sensitivity{sub}</div>
+                <div className="text-xs text-green-600 font-semibold uppercase">Sensitivity{sub}</div>
                 <div className="text-base font-bold text-green-700 tabular-nums">{formatStat(sliderStats.sensitivity)}</div>
               </div>
               <div className="bg-blue-50 rounded-lg p-2 text-center">
-                <div className="text-[10px] text-blue-600 font-semibold uppercase">Specificity{sub}</div>
+                <div className="text-xs text-blue-600 font-semibold uppercase">Specificity{sub}</div>
                 <div className="text-base font-bold text-blue-700 tabular-nums">{formatStat(sliderStats.specificity)}</div>
               </div>
               <div className="bg-green-50 rounded-lg p-2 text-center">
-                <div className="text-[10px] text-green-600 font-semibold uppercase">PPV{sub}</div>
+                <div className="text-xs text-green-600 font-semibold uppercase">PPV{sub}</div>
                 <div className="text-base font-bold text-green-700 tabular-nums">{formatStat(sliderStats.ppv)}</div>
               </div>
               <div className="bg-blue-50 rounded-lg p-2 text-center">
-                <div className="text-[10px] text-blue-600 font-semibold uppercase">NPV{sub}</div>
+                <div className="text-xs text-blue-600 font-semibold uppercase">NPV{sub}</div>
                 <div className="text-base font-bold text-blue-700 tabular-nums">{formatStat(sliderStats.npv)}</div>
               </div>
             </div>
           );
         })()}
 
-        {/* ROC Curve + AUC + d' */}
-        <div>
-          <h3 className="text-xs font-bold text-black uppercase tracking-wide mb-2">
-            ROC Curve
+        {/* About the modeled trajectory */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <h3 className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">
+            About This Trajectory
           </h3>
-          <div className="flex gap-3">
-            <div className="shrink-0">
-              <RocCurve
-                trajectory={trajectory}
-                currentSens={sliderStats.sensitivity}
-                currentFpr={1 - sliderStats.specificity}
-              />
-            </div>
-            <div className="space-y-2 text-sm text-black">
-              {/* AUC badge */}
-              <div className="rounded-lg p-2" style={{ backgroundColor: aucQ.bg }}>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold" style={{ color: aucQ.color }}>AUC = {auc.toFixed(3)}</span>
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: aucQ.color }}>
-                    {aucQ.label}
-                  </span>
-                </div>
-                <p className="text-[10px] leading-relaxed mt-0.5 text-black">
-                  Overall performance across all thresholds. 0.5 = coin flip, 1.0 = perfect.
-                </p>
-              </div>
-              {/* d' badge */}
-              <div className="rounded-lg p-2" style={{ backgroundColor: dpQ.bg }}>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold" style={{ color: dpQ.color }}>d&prime; = {dPrime.toFixed(2)}</span>
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: dpQ.color }}>
-                    {dpQ.label}
-                  </span>
-                </div>
-                <p className="text-[10px] leading-relaxed mt-0.5 text-black">
-                  Separation between diseased and healthy distributions. 0 = no separation, &gt;3 = excellent.
-                </p>
-              </div>
-            </div>
-          </div>
+          <p className="text-sm text-amber-800 leading-relaxed">
+            The trajectory shown here is a <strong>theoretical model</strong> based on signal detection theory, assuming Gaussian equal-variance distributions for the diseased and healthy populations. It is generated from the single operating point you set by dragging the box. In practice, a real test trajectory must be determined empirically by testing the diagnostic measure against a <strong>gold standard</strong> reference at multiple thresholds, using actual patient data. The resulting real-world curve is often asymmetric and irregular, reflecting the true distributional characteristics of the populations being tested.
+          </p>
         </div>
 
       </div>

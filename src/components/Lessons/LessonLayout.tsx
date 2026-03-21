@@ -36,6 +36,7 @@ const SHORT_TITLES = [
   "Chi-Square",
   "ROC Curves",
   "Compare",
+  "Curve Data",
   "Summary",
 ];
 

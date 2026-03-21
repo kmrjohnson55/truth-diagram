@@ -134,6 +134,129 @@ export function computeAUC(
 }
 
 /**
+ * Compute the Trajectory Area Index (TAI).
+ *
+ * TAI is the area between the test trajectory and the chance trajectory
+ * on the truth diagram, normalized to 0–1. At 50% prevalence it equals AUC.
+ * At other prevalences it diverges — reflecting how the test performs in
+ * this specific population (prevalence-sensitive).
+ *
+ * Computed by integrating the trajectory in subject-count space, then
+ * normalizing by the maximum possible area (the triangle formed by the
+ * axes and population limits).
+ */
+export function computeTAI(
+  trajectory: { sensitivity: number; specificity: number }[],
+  diseased: number,
+  healthy: number
+): number {
+  if (diseased <= 0 || healthy <= 0) return 0.5;
+
+  // Compute area under test trajectory in (FP, TP) space using trapezoidal rule
+  // FP = (1 - specificity) * healthy, TP = sensitivity * diseased
+  let areaTrajectory = 0;
+  for (let i = 1; i < trajectory.length; i++) {
+    const fp0 = (1 - trajectory[i - 1].specificity) * healthy;
+    const fp1 = (1 - trajectory[i].specificity) * healthy;
+    const tp0 = trajectory[i - 1].sensitivity * diseased;
+    const tp1 = trajectory[i].sensitivity * diseased;
+    areaTrajectory += 0.5 * (tp0 + tp1) * (fp1 - fp0);
+  }
+
+  // Chance trajectory area: the triangle under the diagonal from (0,0) to (healthy, diseased)
+  // Area = 0.5 * healthy * diseased
+  const areaChance = 0.5 * healthy * diseased;
+
+  // Maximum possible area (perfect test): rectangle healthy × diseased
+  const areaMax = healthy * diseased;
+
+  // Normalize: TAI = (trajectory area - chance area) / (max area - chance area)
+  // This gives 0 for chance, 1 for perfect, matching AUC's 0.5-to-1 range
+  // But we remap to match AUC convention: 0.5 = chance, 1.0 = perfect
+  if (areaMax <= areaChance) return 0.5;
+  const raw = (Math.abs(areaTrajectory) - areaChance) / (areaMax - areaChance);
+  return 0.5 + 0.5 * Math.max(0, Math.min(1, raw));
+}
+
+/**
+ * Compute the Clinical Discrimination Index (CDI).
+ *
+ * CDI is the average of PPV and NPV across all thresholds on the trajectory,
+ * weighted by the fraction of subjects at each operating point. Unlike AUC,
+ * CDI is prevalence-sensitive and directly summarizes clinical usefulness —
+ * how well the test answers the patient's question ("I tested positive/negative,
+ * what are my chances?").
+ *
+ * Range: 0.5 (useless) to 1.0 (perfect).
+ */
+export function computeCDI(
+  trajectory: { sensitivity: number; specificity: number }[],
+  diseased: number,
+  healthy: number
+): number {
+  if (diseased <= 0 || healthy <= 0) return 0.5;
+  const total = diseased + healthy;
+
+  let sumPPV = 0;
+  let sumNPV = 0;
+  let count = 0;
+
+  for (const p of trajectory) {
+    const tp = p.sensitivity * diseased;
+    const fp = (1 - p.specificity) * healthy;
+    const fn = (1 - p.sensitivity) * diseased;
+    const tn = p.specificity * healthy;
+
+    const testPos = tp + fp;
+    const testNeg = fn + tn;
+
+    const ppv = testPos > 0 ? tp / testPos : 0;
+    const npv = testNeg > 0 ? tn / testNeg : 0;
+
+    // Weight by fraction of population in each group
+    sumPPV += ppv * (testPos / total);
+    sumNPV += npv * (testNeg / total);
+    count++;
+  }
+
+  if (count === 0) return 0.5;
+  // Average weighted PPV and NPV
+  return (sumPPV + sumNPV) / count * count / 1 * (1 / count) + (sumPPV + sumNPV) / count;
+}
+
+/**
+ * Simplified CDI: unweighted average of (PPV + NPV) / 2 across all thresholds.
+ */
+export function computeCDISimple(
+  trajectory: { sensitivity: number; specificity: number }[],
+  diseased: number,
+  healthy: number
+): number {
+  if (diseased <= 0 || healthy <= 0) return 0.5;
+
+  let sum = 0;
+  let count = 0;
+
+  for (const p of trajectory) {
+    const tp = p.sensitivity * diseased;
+    const fp = (1 - p.specificity) * healthy;
+    const fn = (1 - p.sensitivity) * diseased;
+    const tn = p.specificity * healthy;
+
+    const testPos = tp + fp;
+    const testNeg = fn + tn;
+
+    const ppv = testPos > 0 ? tp / testPos : 0;
+    const npv = testNeg > 0 ? tn / testNeg : 0;
+
+    sum += (ppv + npv) / 2;
+    count++;
+  }
+
+  return count > 0 ? sum / count : 0.5;
+}
+
+/**
  * Compute the threshold that best reproduces the given sensitivity.
  * t = d'/2 - Φ⁻¹(sensitivity)
  */

@@ -48,11 +48,12 @@ const COMPARISON_PRESETS: ComparisonPreset[] = [
 /* ─── Draggable second box ─── */
 
 function DraggableSecondBox({
-  values, centerX, centerY, scale, color, label, onDrag,
+  values, centerX, centerY, scale, color, label, onDrag, showCorners,
 }: {
   values: CellValues; centerX: number; centerY: number; scale: number;
   color: string; label: string;
   onDrag: (newValues: CellValues) => void;
+  showCorners?: boolean;
 }) {
   const isDragging = useRef(false);
   const startRef = useRef<{ x: number; y: number; values: CellValues } | null>(null);
@@ -107,10 +108,15 @@ function DraggableSecondBox({
     window.addEventListener("mouseup", handleUp);
   }, [getSvgPt, values, scale, onDrag]);
 
+  const corners = [ul, ur, ll, lr];
+
   return (
     <g>
       <path d={pathD} fill={color} fillOpacity={0.08} stroke={color} strokeWidth={2.5}
         style={{ cursor: "grab" }} onMouseDown={handleMouseDown} />
+      {showCorners && corners.map((c, i) => (
+        <circle key={i} cx={c.x} cy={c.y} r={5} fill={color} fillOpacity={0.4} stroke={color} strokeWidth={1.5} />
+      ))}
       <text x={lr.x - 4} y={lr.y - 6} fontSize={13} fontWeight={700} fill={color} textAnchor="end">{label}</text>
     </g>
   );
@@ -421,11 +427,7 @@ export function Lesson9_Compare({
       keyInsight={
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
-            <strong>Key insight:</strong> Two tests applied to the same population produce different box positions.
-            {sameProportions
-              ? " Both boxes have the same shape (same prevalence) but different positions."
-              : " When proportions differ, box shapes also differ — compare with care."}
-            {" "}Drag either box to explore.
+            <strong>Key insight:</strong> Two tests applied to the same population produce different box positions on the truth diagram, making visual comparison straightforward. The chi-square test (previous lesson) can determine whether the difference is statistically significant.
           </p>
         </div>
       }
@@ -465,6 +467,7 @@ export function Lesson9_Compare({
                 <DraggableSecondBox
                   values={magB} centerX={layout.centerX} centerY={layout.centerY}
                   scale={layout.scale} color="#ea580c" label={labelB}
+                  showCorners={!sameProportions}
                   onDrag={(newMagValues) => {
                     if (yMag > 1) {
                       handleDragB({ tp: Math.round(newMagValues.tp / yMag), fp: newMagValues.fp, fn: Math.round(newMagValues.fn / yMag), tn: newMagValues.tn });
@@ -496,6 +499,14 @@ export function Lesson9_Compare({
       }
     >
       <div className="space-y-4">
+        {/* Bold heading */}
+        <h2 className="text-xl font-bold text-black">Comparing Two Tests</h2>
+
+        {/* Population mode explanation */}
+        <p className="text-base text-black leading-relaxed">
+          By default, both tests share the same population (same number of diseased and healthy subjects), so only the box <em>position</em> differs. Uncheck <strong>&ldquo;Same population proportions&rdquo;</strong> below the diagram to compare tests from two <em>different</em> populations &mdash; each box can then be independently resized, and corner handles will appear on Test B.
+        </p>
+
         {/* Test names */}
         <div>
           <h3 className="text-xs font-semibold text-black uppercase tracking-wide mb-2">Test Names</h3>
