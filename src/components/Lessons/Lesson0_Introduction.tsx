@@ -288,6 +288,10 @@ export function Lesson0_Introduction({
               {" "}[<a href="https://pubmed.ncbi.nlm.nih.gov/29536931/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">PubMed</a>]
               {" "}[<a href="https://www.researchgate.net/publication/319190834" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">ResearchGate</a>]
             </li>
+            <li>
+              Levy DG. In machine learning predictions for health care the confusion matrix is a matrix of confusion. <em>Statistical Thinking.</em> 2018.
+              {" "}[<a href="https://www.fharrell.com/post/mlconfusion/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">Full text</a>]
+            </li>
           </ol>
         </div>
       </div>

@@ -403,6 +403,14 @@ export function Lesson5_Trajectory({
             liability &mdash; two populations with very different disease rates might produce identical
             ROC curves but very different predictive values and clinical outcomes.
           </p>
+          <p className="text-base text-black leading-relaxed mt-2">
+            As Levy has argued, sensitivity and specificity condition on the true disease state
+            (the thing you want to predict), when clinicians actually need the reverse &mdash; the
+            probability of disease given the test result. The AUROC, built on these measures,
+            inherits this limitation. The truth diagram&rsquo;s trajectory and its derived
+            metrics (AUT, CPI) address this gap by preserving prevalence and predictive
+            values (<a href="https://www.fharrell.com/post/mlconfusion/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">Levy 2018</a>).
+          </p>
         </div>
 
         {/* Live stats */}
