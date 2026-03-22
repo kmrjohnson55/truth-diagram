@@ -135,48 +135,51 @@ export function Axes({ centerX, centerY, scale, values, tickValues, hideTickAnno
         fill={dim}
       />
 
-      {/* ── Labels ── */}
-      <text x={centerX} y={centerY - upLen - arrowSize - 6}
+      {/* ── Labels — positioned well clear of arrows and box ── */}
+      <text x={centerX} y={centerY - upLen - arrowSize - 12}
         textAnchor="middle" fontSize={13} fontWeight={600} fill={AXIS_LABEL.tp.color}
         style={{ userSelect: "none" }}>{AXIS_LABEL.tp.text}</text>
 
-      <text x={centerX} y={centerY + downLen + arrowSize + 16}
+      <text x={centerX} y={centerY + downLen + arrowSize + 20}
         textAnchor="middle" fontSize={13} fontWeight={600} fill={AXIS_LABEL.fn.color}
         style={{ userSelect: "none" }}>{AXIS_LABEL.fn.text}</text>
 
       <text textAnchor="end" fontSize={13} fontWeight={600} fill={AXIS_LABEL.fp.color}
         style={{ userSelect: "none" }}>
-        <tspan x={centerX - leftLen - arrowSize - 6} y={centerY - 4}>False</tspan>
-        <tspan x={centerX - leftLen - arrowSize - 6} y={centerY + 12}>positive</tspan>
+        <tspan x={centerX - leftLen - arrowSize - 10} y={centerY - 6}>False</tspan>
+        <tspan x={centerX - leftLen - arrowSize - 10} y={centerY + 12}>positive</tspan>
       </text>
 
       <text textAnchor="start" fontSize={13} fontWeight={600} fill={AXIS_LABEL.tn.color}
         style={{ userSelect: "none" }}>
-        <tspan x={centerX + rightLen + arrowSize + 6} y={centerY - 4}>True</tspan>
-        <tspan x={centerX + rightLen + arrowSize + 6} y={centerY + 12}>negative</tspan>
+        <tspan x={centerX + rightLen + arrowSize + 10} y={centerY - 6}>True</tspan>
+        <tspan x={centerX + rightLen + arrowSize + 10} y={centerY + 12}>negative</tspan>
       </text>
 
-      {/* Tick interval annotations */}
-      {!hideTickAnnotation && (
-        (showH || showV) && sameInterval ? (
-          <text x={centerX + 8} y={centerY + 16} fontSize={10} fill="#64748b" style={{ userSelect: "none" }}>
-            1 tick = {TICK_INTERVAL_H}
+      {/* Tick interval annotations — positioned below and to the right of the box, never overlapping */}
+      {!hideTickAnnotation && (() => {
+        const boxBottom = centerY + values.fn * scale;
+        const boxRight = centerX + values.tn * scale;
+        const annotY = boxBottom + 24;
+        return (showH || showV) && sameInterval ? (
+          <text x={boxRight} y={annotY} textAnchor="end" fontSize={11} fill="#64748b" style={{ userSelect: "none" }}>
+            1 tick = {TICK_INTERVAL_H} subjects
           </text>
         ) : (
           <>
             {showH && (
-              <text x={centerX + 8} y={centerY + 16} fontSize={10} fill="#64748b" style={{ userSelect: "none" }}>
-                {"↔"} 1 tick = {TICK_INTERVAL_H}
+              <text x={boxRight} y={annotY} textAnchor="end" fontSize={11} fill="#64748b" style={{ userSelect: "none" }}>
+                {"↔"} X axis: 1 tick = {TICK_INTERVAL_H} subjects
               </text>
             )}
             {showV && (
-              <text x={centerX + 8} y={centerY - 8} fontSize={10} fill="#64748b" style={{ userSelect: "none" }}>
-                {"↕"} 1 tick = {TICK_INTERVAL_V}
+              <text x={boxRight} y={annotY + (showH ? 16 : 0)} textAnchor="end" fontSize={11} fill="#64748b" style={{ userSelect: "none" }}>
+                {"↕"} Y axis: 1 tick = {TICK_INTERVAL_V} subjects
               </text>
             )}
           </>
-        )
-      )}
+        );
+      })()}
     </g>
   );
 }

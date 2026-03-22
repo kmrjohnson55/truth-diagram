@@ -44,34 +44,70 @@ function generateDefaultRows(values: CellValues): ThresholdRow[] {
 
 /* ─── CSV parsing ─── */
 
-function parseCSV(text: string): ThresholdRow[] {
+interface ParsedCSV {
+  a: ThresholdRow[];
+  b: ThresholdRow[];
+}
+
+function parseCSV(text: string): ParsedCSV {
   const lines = text.trim().split(/\r?\n/);
-  const rows: ThresholdRow[] = [];
+  const rowsA: ThresholdRow[] = [];
+  const rowsB: ThresholdRow[] = [];
+  let hasTestCol = false;
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-    // Skip header-like lines
-    if (i === 0 && /[a-zA-Z]/.test(line.replace(/["',]/g, "").replace(/threshold/i, ""))) continue;
+    // Detect header
+    if (i === 0 && /[a-zA-Z]/.test(line.replace(/["',]/g, "").replace(/threshold/i, "").replace(/test/i, ""))) {
+      hasTestCol = /^["']?test["']?[,\t;]/i.test(line);
+      continue;
+    }
     const parts = line.split(/[,\t;]+/).map(s => s.trim().replace(/^["']|["']$/g, ""));
     if (parts.length < 4) continue;
-    // Try: threshold,tp,fp,fn,tn or just tp,fp,fn,tn
+
+    let testLabel = "A";
     let threshold = "";
     let tp: number, fp: number, fn: number, tn: number;
-    if (parts.length >= 5) {
+
+    if (hasTestCol && parts.length >= 6) {
+      // test, threshold, tp, fp, fn, tn
+      testLabel = parts[0].toUpperCase();
+      threshold = parts[1];
+      tp = parseInt(parts[2]) || 0;
+      fp = parseInt(parts[3]) || 0;
+      fn = parseInt(parts[4]) || 0;
+      tn = parseInt(parts[5]) || 0;
+    } else if (hasTestCol && parts.length >= 5) {
+      // test, tp, fp, fn, tn (no threshold)
+      testLabel = parts[0].toUpperCase();
+      tp = parseInt(parts[1]) || 0;
+      fp = parseInt(parts[2]) || 0;
+      fn = parseInt(parts[3]) || 0;
+      tn = parseInt(parts[4]) || 0;
+    } else if (parts.length >= 5) {
+      // threshold, tp, fp, fn, tn
       threshold = parts[0];
       tp = parseInt(parts[1]) || 0;
       fp = parseInt(parts[2]) || 0;
       fn = parseInt(parts[3]) || 0;
       tn = parseInt(parts[4]) || 0;
     } else {
+      // tp, fp, fn, tn
       tp = parseInt(parts[0]) || 0;
       fp = parseInt(parts[1]) || 0;
       fn = parseInt(parts[2]) || 0;
       tn = parseInt(parts[3]) || 0;
     }
-    rows.push({ threshold, tp, fp, fn, tn });
+
+    const row: ThresholdRow = { threshold, tp, fp, fn, tn };
+    if (testLabel === "B") {
+      rowsB.push(row);
+    } else {
+      rowsA.push(row);
+    }
   }
-  return rows;
+  return { a: rowsA, b: rowsB };
 }
 
 /* ─── Interpolation ─── */
@@ -107,12 +143,16 @@ function DataTable({
   values,
   color,
   label,
+  onDataChanged,
+  onResetToModel,
 }: {
   rows: ThresholdRow[];
   setRows: React.Dispatch<React.SetStateAction<ThresholdRow[]>>;
   values: CellValues;
   color: string;
   label: string;
+  onDataChanged?: () => void;
+  onResetToModel?: () => void;
 }) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const updateRow = (index: number, field: keyof ThresholdRow, value: string) => {
@@ -137,6 +177,7 @@ function DataTable({
 
   const resetToDefault = () => {
     setRows(generateDefaultRows(values));
+    onResetToModel?.();
   };
 
   const rowStats = useMemo(() => {
@@ -274,7 +315,10 @@ function DataTable({
               const text = ev.target?.result;
               if (typeof text === "string") {
                 const parsed = parseCSV(text);
-                if (parsed.length > 0) setRows(parsed);
+                if (parsed.a.length > 0) {
+                  setRows(parsed.a);
+                  onDataChanged?.();
+                }
               }
             };
             reader.readAsText(file);
@@ -331,7 +375,8 @@ export function LessonCurveInput({
 
   const [rowsA, setRowsA] = useState<ThresholdRow[]>(defaultRowsA);
   const [rowsB, setRowsB] = useState<ThresholdRow[]>(defaultRowsB);
-  const [showDualData, setShowDualData] = useState(false);
+  const [isModelA, setIsModelA] = useState(true);
+  const [isModelB, setIsModelB] = useState(true);
   const [activeTab, setActiveTab] = useState<"A" | "B">("A");
 
   return (
@@ -351,54 +396,80 @@ export function LessonCurveInput({
       testToggle={testToggle}
       diagram={
         <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-black uppercase tracking-wide">
-              Threshold Data Table
-            </h3>
-            <label className="flex items-center gap-1.5 text-xs text-black">
-              <input type="checkbox" checked={showDualData} onChange={(e) => setShowDualData(e.target.checked)}
-                className="accent-indigo-500" />
-              Two tests (A &amp; B)
-            </label>
-          </div>
+          <h3 className="text-sm font-bold text-black uppercase tracking-wide mb-3">
+            Threshold Data Table
+          </h3>
           <p className="text-sm text-black mb-3">
             Enter the 2&times;2 table values for each threshold of your diagnostic test.
             Each row represents a different cutoff value tested against a gold standard.
-            {showDualData && " Use the tabs below to switch between Test A and Test B data."}
+            Use the tabs below to switch between Test A and Test B data.
           </p>
 
-          {showDualData ? (
-            <>
-              <div className="flex gap-1 mb-3">
-                <button
-                  onClick={() => setActiveTab("A")}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-t-md transition-colors ${
-                    activeTab === "A"
-                      ? "bg-blue-100 text-blue-700 border border-blue-200 border-b-0"
-                      : "bg-slate-50 text-black border border-slate-200 border-b-0 hover:bg-slate-100"
-                  }`}
-                >
-                  Test A
-                </button>
-                <button
-                  onClick={() => setActiveTab("B")}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-t-md transition-colors ${
-                    activeTab === "B"
-                      ? "bg-orange-100 text-orange-700 border border-orange-200 border-b-0"
-                      : "bg-slate-50 text-black border border-slate-200 border-b-0 hover:bg-slate-100"
-                  }`}
-                >
-                  Test B
-                </button>
-              </div>
-              {activeTab === "A" ? (
-                <DataTable rows={rowsA} setRows={setRowsA} values={values} color="#2563eb" label="Test A Data" />
-              ) : (
-                <DataTable rows={rowsB} setRows={setRowsB} values={values} color="#ea580c" label="Test B Data" />
-              )}
-            </>
+          {/* Model data notice */}
+          {((activeTab === "A" && isModelA) || (activeTab === "B" && isModelB)) && (
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-2.5 mb-3">
+              <p className="text-sm text-amber-800 font-semibold">
+                &#9888; {activeTab === "A" ? "Test A" : "Test B"} is showing <em>model-generated</em> data (fictional).
+                Upload or enter your own data to analyze a real test.
+              </p>
+            </div>
+          )}
+
+          {/* Top-level CSV upload for both tests */}
+          <div className="flex gap-2 mb-3">
+            <button onClick={() => {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = ".csv,.tsv,.txt";
+              input.onchange = (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  const text = ev.target?.result;
+                  if (typeof text === "string") {
+                    const parsed = parseCSV(text);
+                    if (parsed.a.length > 0) { setRowsA(parsed.a); setIsModelA(false); }
+                    if (parsed.b.length > 0) { setRowsB(parsed.b); setIsModelB(false); }
+                  }
+                };
+                reader.readAsText(file);
+              };
+              input.click();
+            }}
+              className="px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-md transition-colors border border-green-200">
+              Upload CSV (both tests)
+            </button>
+          </div>
+
+          <div className="flex gap-1 mb-3">
+            <button
+              onClick={() => setActiveTab("A")}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-t-md transition-colors ${
+                activeTab === "A"
+                  ? "bg-blue-100 text-blue-700 border border-blue-200 border-b-0"
+                  : "bg-slate-50 text-black border border-slate-200 border-b-0 hover:bg-slate-100"
+              }`}
+            >
+              Test A {isModelA && <span className="text-amber-500 ml-1">(model)</span>}
+            </button>
+            <button
+              onClick={() => setActiveTab("B")}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-t-md transition-colors ${
+                activeTab === "B"
+                  ? "bg-orange-100 text-orange-700 border border-orange-200 border-b-0"
+                  : "bg-slate-50 text-black border border-slate-200 border-b-0 hover:bg-slate-100"
+              }`}
+            >
+              Test B {isModelB && <span className="text-amber-500 ml-1">(model)</span>}
+            </button>
+          </div>
+          {activeTab === "A" ? (
+            <DataTable rows={rowsA} setRows={setRowsA} values={values} color="#2563eb" label="Test A Data"
+              onDataChanged={() => setIsModelA(false)} onResetToModel={() => setIsModelA(true)} />
           ) : (
-            <DataTable rows={rowsA} setRows={setRowsA} values={values} color="#1e293b" label="Test Data" />
+            <DataTable rows={rowsB} setRows={setRowsB} values={values} color="#ea580c" label="Test B Data"
+              onDataChanged={() => setIsModelB(false)} onResetToModel={() => setIsModelB(true)} />
           )}
         </div>
       }
@@ -420,16 +491,13 @@ export function LessonCurveInput({
           This data can then be used to generate real ROC curves and test trajectories.
         </p>
 
-        {showDualData && (
-          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
-            <p className="text-sm text-indigo-800">
-              <strong>Two-test mode</strong> is enabled. You can enter separate threshold
-              data for each test. Use the tabs on the left to switch between
-              Test A and Test B. This corresponds to the two tests shown on the
-              <strong> Compare</strong> page.
-            </p>
-          </div>
-        )}
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+          <p className="text-sm text-indigo-800">
+            Use the <strong>Test A</strong> and <strong>Test B</strong> tabs on the left to enter
+            separate threshold data for each test. This data is used for trajectories and ROC curves
+            on the <strong>ROC Curves</strong> and <strong>Compare</strong> pages.
+          </p>
+        </div>
 
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
@@ -505,17 +573,16 @@ export function LessonCurveInput({
           </div>
 
           <div>
-            <h4 className="text-xs font-bold text-black uppercase tracking-wide mb-1">Download sample files</h4>
-            <div className="flex gap-2">
-              <a href={`${import.meta.env.BASE_URL}sample-curve-data.csv`} download
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors border border-indigo-200">
-                Sample CSV (single test)
-              </a>
-              <a href={`${import.meta.env.BASE_URL}sample-curve-data-two-tests.csv`} download
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors border border-indigo-200">
-                Sample CSV (two tests)
-              </a>
-            </div>
+            <h4 className="text-xs font-bold text-black uppercase tracking-wide mb-1">Download sample file</h4>
+            <p className="text-sm text-black leading-relaxed mb-2">
+              This sample includes data for two tests (A and B). To include two tests in one file,
+              add a <code className="text-xs bg-slate-200 px-1 rounded">test</code> column with
+              values &ldquo;A&rdquo; or &ldquo;B&rdquo; as the first column.
+            </p>
+            <a href={`${import.meta.env.BASE_URL}sample-curve-data.csv`} download
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors border border-indigo-200">
+              Download sample CSV (Tests A &amp; B)
+            </a>
           </div>
         </div>
       </div>

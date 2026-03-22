@@ -218,14 +218,14 @@ export function Lesson0_Introduction({
 
             return (
               <g>
-                {/* ── Cell abbreviations beside each axis label ── */}
-                <text x={cx} y={cy - upLen - arrowSize - 6 + 15} textAnchor="middle"
+                {/* ── Cell abbreviations below each axis label, well clear ── */}
+                <text x={cx} y={cy - upLen - arrowSize - 24} textAnchor="middle"
                   fontSize={12} fontWeight={700} fill={CELL_COLORS.tp} style={{ userSelect: "none" }}>(TP)</text>
-                <text x={cx} y={cy + downLen + arrowSize + 16 + 14} textAnchor="middle"
+                <text x={cx} y={cy + downLen + arrowSize + 34} textAnchor="middle"
                   fontSize={12} fontWeight={700} fill={CELL_COLORS.fn} style={{ userSelect: "none" }}>(FN)</text>
-                <text x={cx - leftLen - arrowSize - 6} y={cy + 26} textAnchor="end"
+                <text x={cx - leftLen - arrowSize - 10} y={cy + 28} textAnchor="end"
                   fontSize={12} fontWeight={700} fill={CELL_COLORS.fp} style={{ userSelect: "none" }}>(FP)</text>
-                <text x={cx + rightLen + arrowSize + 6} y={cy + 26} textAnchor="start"
+                <text x={cx + rightLen + arrowSize + 10} y={cy + 28} textAnchor="start"
                   fontSize={12} fontWeight={700} fill={CELL_COLORS.tn} style={{ userSelect: "none" }}>(TN)</text>
 
                 {/* ── Curly brackets ── */}
