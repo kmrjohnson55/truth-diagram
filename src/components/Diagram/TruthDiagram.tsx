@@ -299,6 +299,33 @@ export function TruthDiagram({ values, onDrag, overlays = [], renderExtraSvg, be
           axisOvershootOverride={axisOvershootOverride}
         />
 
+        {/* Cell value labels at box-axis intersections */}
+        {(() => {
+          const dv = displayValues;
+          const boxTop = centerY - dv.tp * scale;
+          const boxBot = centerY + dv.fn * scale;
+          const boxLeft = centerX - dv.fp * scale;
+          const boxRight = centerX + dv.tn * scale;
+          const pad = 5;
+          const fontSize = 11;
+          return (
+            <g className="cell-value-labels" style={{ userSelect: "none" }}>
+              {/* TP — right of vertical axis, at top edge of box */}
+              <text x={centerX + pad} y={boxTop - pad} textAnchor="start"
+                fontSize={fontSize} fontWeight={700} fill={CELL_COLORS.tp}>{values.tp}</text>
+              {/* FN — right of vertical axis, at bottom edge of box */}
+              <text x={centerX + pad} y={boxBot + pad + fontSize} textAnchor="start"
+                fontSize={fontSize} fontWeight={700} fill={CELL_COLORS.fn}>{values.fn}</text>
+              {/* FP — above horizontal axis, at left edge of box */}
+              <text x={boxLeft - pad} y={centerY - pad} textAnchor="end"
+                fontSize={fontSize} fontWeight={700} fill={CELL_COLORS.fp}>{values.fp}</text>
+              {/* TN — above horizontal axis, at right edge of box */}
+              <text x={boxRight + pad} y={centerY - pad} textAnchor="start"
+                fontSize={fontSize} fontWeight={700} fill={CELL_COLORS.tn}>{values.tn}</text>
+            </g>
+          );
+        })()}
+
         {/* Corner handles */}
         {onDrag && (
           <g className="corner-handles">
