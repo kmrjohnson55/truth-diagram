@@ -39,6 +39,78 @@ export function LessonOddsRatio({ values, stats, setValue, setValues, totalLesso
         <TruthDiagram
           values={values}
           onDrag={costState.costMode ? undefined : setValues}
+          belowDiagramText={(() => {
+            // Scale rectangles proportional to actual areas, fitting within formula space
+            const maxArea = Math.max(areaUpper, areaLower, 1);
+            const maxW = 70; // max rect width
+            const maxH = 26; // max rect height
+            // Use sqrt of area ratio so the rectangle "looks" proportional
+            const greenScale = Math.sqrt(areaUpper / maxArea);
+            const redScale = Math.sqrt(areaLower / maxArea);
+            const greenW = Math.max(12, Math.round(maxW * greenScale));
+            const greenH = Math.max(8, Math.round(maxH * greenScale));
+            const redW = Math.max(12, Math.round(maxW * redScale));
+            const redH = Math.max(8, Math.round(maxH * redScale));
+            // Center both rects at x=230, fraction line at y=38
+            const greenX = 230 - greenW / 2;
+            const greenY = 36 - greenH - 2;
+            const redX = 230 - redW / 2;
+            const redY = 40;
+            const areaLabelX = Math.max(greenX + greenW, redX + redW) + 6;
+            const fracLineLeft = Math.min(greenX, redX) - 5;
+            const fracLineRight = areaLabelX + 28;
+
+            return (
+            <div className="mx-auto max-w-lg">
+              <svg viewBox="0 0 480 90" className="w-full" style={{ maxHeight: 90 }}>
+                <defs>
+                  <pattern id="hatch-green" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+                    <line x1="0" y1="0" x2="0" y2="6" stroke="#16a34a" strokeWidth="1.5" strokeOpacity="0.5" />
+                  </pattern>
+                  <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="5" height="5" patternTransform="rotate(-45)">
+                    <line x1="0" y1="0" x2="0" y2="5" stroke="#dc2626" strokeWidth="2" strokeOpacity="0.6" />
+                  </pattern>
+                </defs>
+
+                {/* "Odds Ratio =" */}
+                <text x="0" y="48" fontSize="14" fontWeight="700" fill="#1e1b4b" fontFamily="Arial">Odds Ratio =</text>
+
+                {/* Text fraction: TP × TN / FP × FN */}
+                <text x="130" y="30" fontSize="13" fontWeight="600" fill="#334155" textAnchor="middle" fontFamily="Arial">TP &times; TN</text>
+                <line x1="100" y1="38" x2="162" y2="38" stroke="#334155" strokeWidth="1.5" />
+                <text x="130" y="55" fontSize="13" fontWeight="600" fill="#334155" textAnchor="middle" fontFamily="Arial">FP &times; FN</text>
+
+                <text x="178" y="48" fontSize="14" fontWeight="700" fill="#1e1b4b" fontFamily="Arial">=</text>
+
+                {/* Dynamic green hatched rectangle — proportional to TP×TN area */}
+                <rect x={greenX} y={greenY} width={greenW} height={greenH}
+                  fill="url(#hatch-green)" stroke="#16a34a" strokeWidth="1" />
+                <text x={areaLabelX} y={greenY + greenH / 2 + 4}
+                  fontSize="10" fill="#16a34a" fontWeight="600" fontFamily="Arial">Area</text>
+
+                {/* Fraction line */}
+                <line x1={fracLineLeft} y1="38" x2={fracLineRight} y2="38" stroke="#334155" strokeWidth="1.5" />
+
+                {/* Dynamic red hatched rectangle — proportional to FP×FN area */}
+                <rect x={redX} y={redY} width={redW} height={redH}
+                  fill="url(#hatch-red)" stroke="#dc2626" strokeWidth="1" />
+                <text x={areaLabelX} y={redY + redH / 2 + 4}
+                  fontSize="10" fill="#dc2626" fontWeight="600" fontFamily="Arial">Area</text>
+
+                {/* "=" */}
+                <text x={fracLineRight + 12} y="48" fontSize="14" fontWeight="700" fill="#1e1b4b" fontFamily="Arial">=</text>
+
+                {/* Numeric fraction */}
+                <text x={fracLineRight + 60} y="30" fontSize="12" fontWeight="600" fill="#16a34a" textAnchor="middle" fontFamily="Arial">{areaUpper.toLocaleString()}</text>
+                <line x1={fracLineRight + 28} y1="38" x2={fracLineRight + 92} y2="38" stroke="#334155" strokeWidth="1.5" />
+                <text x={fracLineRight + 60} y="55" fontSize="12" fontWeight="600" fill="#dc2626" textAnchor="middle" fontFamily="Arial">{areaLower.toLocaleString()}</text>
+
+                {/* Final result */}
+                <text x={fracLineRight + 102} y="48" fontSize="16" fontWeight="800" fill="#6b21a8" fontFamily="Arial">= {orValue === Infinity ? "\u221E" : orValue.toFixed(1)}</text>
+              </svg>
+            </div>
+            );
+          })()}
           renderExtraSvg={(layout) => {
             const { centerX: cx, centerY: cy, scale: s } = layout;
             // Highlight the two area rectangles: upper-right (TP×TN) and lower-left (FP×FN)
@@ -118,20 +190,9 @@ export function LessonOddsRatio({ values, stats, setValue, setValues, totalLesso
           </div>
         </div>
 
-        {/* Formula */}
-        <div className="bg-purple-50 rounded-lg p-4 space-y-2">
-          <div className="text-sm font-mono text-purple-800">
-            DOR{sub} = (<span style={{ color: CELL_COLORS.tp }}>TP{sub}</span> &times; <span style={{ color: CELL_COLORS.tn }}>TN{sub}</span>) / (<span style={{ color: CELL_COLORS.fp }}>FP{sub}</span> &times; <span style={{ color: CELL_COLORS.fn }}>FN{sub}</span>)
-          </div>
-          <div className="text-sm font-mono text-purple-800">
-            = (<span style={{ color: CELL_COLORS.tp }}>{tp}</span> &times; <span style={{ color: CELL_COLORS.tn }}>{tn}</span>) / (<span style={{ color: CELL_COLORS.fp }}>{fp}</span> &times; <span style={{ color: CELL_COLORS.fn }}>{fn}</span>)
-          </div>
-          <div className="text-sm font-mono text-purple-800">
-            = <span style={{ color: "#16a34a" }}>{areaUpper.toLocaleString()}</span> / <span style={{ color: "#dc2626" }}>{areaLower.toLocaleString()}</span>
-          </div>
-          <div className="text-lg font-bold text-purple-700">
-            = {orValue === Infinity ? "\u221E" : orValue.toFixed(1)}
-          </div>
+        {/* Text-only formula reference */}
+        <div className="bg-purple-50 rounded-lg p-3 text-sm font-mono text-purple-800">
+          DOR{sub} = (<span style={{ color: CELL_COLORS.tp }}>TP{sub}</span> &times; <span style={{ color: CELL_COLORS.tn }}>TN{sub}</span>) / (<span style={{ color: CELL_COLORS.fp }}>FP{sub}</span> &times; <span style={{ color: CELL_COLORS.fn }}>FN{sub}</span>) = <span className="font-bold text-purple-700 text-base">{orValue === Infinity ? "\u221E" : orValue.toFixed(1)}</span>
         </div>
 
         {/* Equivalence to LR */}
