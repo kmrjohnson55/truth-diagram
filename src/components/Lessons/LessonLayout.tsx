@@ -66,17 +66,11 @@ export function LessonLayout({
       <div className="px-3 py-2 bg-white border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto">
         <button
           onClick={onHome}
-          className="px-2 py-1 text-xs font-medium text-black hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors shrink-0"
-        >
-          &larr; Home
-        </button>
-        <button
-          onClick={() => onGoTo(-1)}
           className={`px-2 py-1 text-xs font-medium rounded-md transition-colors shrink-0 ${
-            meta.number === 0 ? "bg-indigo-100 text-indigo-700" : "text-black hover:bg-slate-100"
+            meta.number === 0 ? "bg-indigo-100 text-indigo-700" : "text-black hover:text-slate-800 hover:bg-slate-100"
           }`}
         >
-          Intro
+          &larr; Intro
         </button>
         {SHORT_TITLES.map((title, i) => {
           const num = i + 1;
